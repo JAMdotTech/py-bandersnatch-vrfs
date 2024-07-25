@@ -1,0 +1,14 @@
+[package]
+name = "py_bandersnatch_vrfs"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "bandersnatch_vrfs"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.22.2", features = ["extension-module"] }
+ark-ec-vrfs ={ git = "https://github.com/davxy/ark-ec-vrfs", rev = "e868d12", default-features = false, features = ["bandersnatch", "ring", "parallel", "test-vectors"] }
+hex = "0.4.3"

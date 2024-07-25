@@ -1,0 +1,23 @@
+[build-system]
+requires = ["maturin>=0.14,<0.15"]
+build-backend = "maturin"
+
+[project]
+name = "bandersnatch_vrfs"
+version = "0.1.0"
+description = "Python Bandersnatch VRFs library utilizing the RUST ark-ec-vrfs cryptographic library"
+readme = "README.md"
+
+authors = [
+    { name = "JAMdot Technologies", email = "info@jamdot.tech" }
+]
+
+requires-python = ">=3.7"
+license = {file = "LICENSE"}
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+
+

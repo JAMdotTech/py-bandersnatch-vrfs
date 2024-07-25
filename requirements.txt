@@ -1,0 +1,3 @@
+# Rust->Python build process
+pytest
+maturin ~= 1.6.0
