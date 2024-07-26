@@ -2,7 +2,7 @@ import json
 import unittest
 from os import path
 
-from bandersnatch_vrfs import public_from_secret
+from bandersnatch_vrfs import public_from_secret, generate_vrf_proof
 
 
 class TestVectors(unittest.TestCase):
@@ -18,14 +18,25 @@ class TestVectors(unittest.TestCase):
     def test_vectors(self):
         for vector in self.test_vector_data:
             name = vector['comment']
-            secret_key = vector['sk']
+            secret_key = bytes.fromhex(vector['sk'])
 
-            public = bytes(public_from_secret(bytes.fromhex(secret_key)))
+            self.assertEqual(vector['sk'], secret_key.hex(), f"Vector {name}: Pk does not match")
 
-            self.assertEqual(vector['pk'], public.hex(), f"Vector {name}: Pk does not match for")
+            public = public_from_secret(secret_key)
+
+            self.assertEqual(vector['pk'], public.hex(), f"Vector {name}: Pk does not match")
             # TODO
-            # input = vector['h']
-            # output = vector['gamma']
-            # proof = vector['ad']
+            # vector_input = bytes.fromhex(vector['h'])
+            # vector_output = bytes.fromhex(vector['gamma'])
+            # vector_aux = bytes.fromhex(vector['ad'])
+            # vector_proof_c = bytes.fromhex(vector['proof_c'])
+            # vector_proof_s = bytes.fromhex(vector['proof_s'])
+            #
+            # proof = generate_vrf_proof(secret_key, vector_input, vector_output, vector_aux)
+            #
+            # self.assertEqual(vector_proof_c.hex(), proof.c.hex(), f"Vector {name}: Proof does not match for")
+            # self.assertEqual(vector_proof_s.hex(), proof.s.hex(), f"Vector {name}: Proof does not match for")
+
+
 
 
