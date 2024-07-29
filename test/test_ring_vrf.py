@@ -1,6 +1,7 @@
 import unittest
 
-from bandersnatch_vrfs import ring_vrf_sign, ring_vrf_verify, ietf_vrf_sign, secret_from_seed, public_from_secret, ring_ietf_vrf_verify
+from bandersnatch_vrfs import ring_vrf_sign, ring_vrf_verify, ietf_vrf_sign, secret_from_seed, public_from_secret, \
+ ietf_vrf_verify
 
 
 class TestRingVRF(unittest.TestCase):
@@ -40,8 +41,8 @@ class TestRingVRF(unittest.TestCase):
         aux_data = b"bar"
         signature = ietf_vrf_sign(self.ring_secrets[signer_key_index], vrf_input_data, aux_data)
 
-        vrf_output_hash = ring_ietf_vrf_verify(
-            self.ring_data, self.ring_publics, signer_key_index, vrf_input_data, aux_data, signature
+        vrf_output_hash = ietf_vrf_verify(
+            self.ring_publics[signer_key_index], vrf_input_data, aux_data, signature
         )
 
         self.assertEqual(
