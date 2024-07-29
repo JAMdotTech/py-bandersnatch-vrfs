@@ -8,10 +8,8 @@ use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use pyo3::types::PyBytes;
 use std::fmt;
 use std::error::Error;
-use ark_ec_vrfs::ietf::{IetfSuite, Proof};
+use ark_ec_vrfs::ietf::{Proof};
 use ark_ec_vrfs::suites::bandersnatch::edwards::BandersnatchSha512Ell2;
-
-const RING_SIZE: usize = 1023;
 
 // This is the IETF `Prove` procedure output as described in section 2.2
 // of the Bandersnatch VRFs specification
@@ -99,24 +97,24 @@ impl Prover {
         buf
     }
 
-    /// Non-Anonymous VRF signature.
-    ///
-    /// Used for ticket claiming during block production.
-    /// Not used with Safrole test vectors.
-    pub fn ietf_vrf_sign(&self, vrf_input_data: &[u8], aux_data: &[u8]) -> Vec<u8> {
-        use ark_ec_vrfs::ietf::Prover as _;
-
-        let input = vrf_input_point(vrf_input_data);
-        let output = self.secret.output(input);
-
-        let proof = self.secret.prove(input, output, aux_data);
-
-        // Output and IETF Proof bundled together (as per section 2.2)
-        let signature = IetfVrfSignature { output, proof };
-        let mut buf = Vec::new();
-        signature.serialize_compressed(&mut buf).unwrap();
-        buf
-    }
+    // /// Non-Anonymous VRF signature.
+    // ///
+    // /// Used for ticket claiming during block production.
+    // /// Not used with Safrole test vectors.
+    // pub fn ietf_vrf_sign(&self, vrf_input_data: &[u8], aux_data: &[u8]) -> Vec<u8> {
+    //     use ark_ec_vrfs::ietf::Prover as _;
+    //
+    //     let input = vrf_input_point(vrf_input_data);
+    //     let output = self.secret.output(input);
+    //
+    //     let proof = self.secret.prove(input, output, aux_data);
+    //
+    //     // Output and IETF Proof bundled together (as per section 2.2)
+    //     let signature = IetfVrfSignature { output, proof };
+    //     let mut buf = Vec::new();
+    //     signature.serialize_compressed(&mut buf).unwrap();
+    //     buf
+    // }
 }
 
 type RingCommitment = ark_ec_vrfs::ring::RingCommitment<BandersnatchSha512Ell2>;
@@ -179,7 +177,7 @@ impl Verifier {
 
         // This truncated hash is the actual value used as ticket-id/score in JAM
         let vrf_output_hash: [u8; 32] = output.hash()[..32].try_into().unwrap();
-        println!(" vrf-output-hash: {}", hex::encode(vrf_output_hash));
+        // println!(" vrf-output-hash: {}", hex::encode(vrf_output_hash));
         Ok(vrf_output_hash)
     }
 
@@ -225,22 +223,21 @@ impl Verifier {
 pub type PublicKey = [u8; 32];
 pub type SecretKey = [u8; 32];
 
-fn ring_vrf_sign_inner(ring_data: Vec<u8>, ring_public_keys: Vec<Vec<u8>>, secret_key: Vec<u8>, prover_key_index: usize, vrf_input_data: &[u8],
-                 aux_data: &[u8]) -> Vec<u8> {
+fn vec_array_to_public(ring_public_keys: Vec<Vec<u8>>) -> Vec<Public> {
     let ring_set: Vec<Public> = ring_public_keys.iter()
         .map(|key_bytes| Public::deserialize_compressed(&mut &key_bytes[..]).unwrap())
         .collect();
+    ring_set
+}
+
+fn ring_vrf_sign_inner(ring_data: Vec<u8>, ring_public_keys: Vec<Vec<u8>>, secret_key: Vec<u8>, prover_key_index: usize, vrf_input_data: &[u8],
+                 aux_data: &[u8]) -> Vec<u8> {
+    let ring_set: Vec<Public> = vec_array_to_public(ring_public_keys);
 
     let secret = Secret::deserialize_compressed(&mut &secret_key[..]).unwrap();
 
+    // Determine prover in the ring_set
     let prover = Prover::new(ring_set.clone(), secret,  prover_key_index);
-    // let verifier = Verifier::new(&ring_data, ring_set);
-
-    // let vrf_input_data = b"foo";
-
-    //--- Anonymous VRF
-
-    // let aux_data = b"bar";
 
     // Prover signs some data.
     let ring_signature = prover.ring_vrf_sign(&ring_data, vrf_input_data, aux_data);
@@ -262,9 +259,8 @@ fn ring_vrf_verify_inner(
         aux_data: &[u8],
         ring_signature: &[u8],
     ) -> Result<[u8; 32], VrfError> {
-    let ring_set: Vec<Public> = ring_public_keys.iter()
-        .map(|key_bytes| Public::deserialize_compressed(&mut &key_bytes[..]).unwrap())
-        .collect();
+
+    let ring_set: Vec<Public> = vec_array_to_public(ring_public_keys);
 
     let verifier = Verifier::new(ring_data.clone(), ring_set);
 
@@ -288,9 +284,8 @@ fn ring_vrf_verify(
 
 fn ring_ietf_vrf_verify_inner(ring_data: Vec<u8>, ring_public_keys: Vec<Vec<u8>>, signer_key_index: usize, vrf_input_data: &[u8],
         aux_data: &[u8], signature: &[u8],) -> Result<[u8; 32], VrfError> {
-    let ring_set: Vec<Public> = ring_public_keys.iter()
-        .map(|key_bytes| Public::deserialize_compressed(&mut &key_bytes[..]).unwrap())
-        .collect();
+    let ring_set: Vec<Public> = vec_array_to_public(ring_public_keys);
+
     let verifier = Verifier::new(ring_data, ring_set);
 
     let vrf_output_hash = verifier.ietf_vrf_verify(vrf_input_data, aux_data, &signature, signer_key_index);
@@ -462,6 +457,7 @@ fn bandersnatch_vrfs(m: &Bound<'_, PyModule>) -> PyResult<()> {
 mod tests {
     use super::*;
     use std::{fs::File, io::Read};
+    use ark_ec_vrfs::Public;
     use lazy_static::lazy_static;
 
     lazy_static! {
@@ -475,14 +471,11 @@ mod tests {
         };
     }
 
-    #[test]
-    fn test_ring_vrf() {
-        // Setup ring
-        let ring_size: usize = 1023;
+    fn load_ring_data(ring_size: usize) -> (Vec<Secret>, Vec<Public<BandersnatchSha512Ell2>>) {
 
         // Generate secrets and corresponding public keys
         let mut secrets: Vec<Secret> = Vec::with_capacity(ring_size);
-        let mut publics: Vec<Public> = Vec::with_capacity(ring_size);
+        let mut publics: Vec<Public<BandersnatchSha512Ell2>> = Vec::with_capacity(ring_size);
 
         for i in 0..ring_size {
             let secret = Secret::from_seed(&i.to_le_bytes());
@@ -490,14 +483,27 @@ mod tests {
             secrets.push(secret);
             publics.push(public);
         }
+        (secrets, publics)
+    }
 
-        let ring_public_keys: Vec<Vec<u8>> = publics.iter()
+    fn vec_public_to_array(publics: Vec<Public<BandersnatchSha512Ell2>>) -> Vec<Vec<u8>> {
+         let ring_public_keys: Vec<Vec<u8>> = publics.iter()
             .map(|public| {
                 let mut key_bytes = Vec::new();
                 public.serialize_compressed(&mut key_bytes).unwrap();
                 key_bytes
             })
             .collect();
+        ring_public_keys
+    }
+
+    #[test]
+    fn test_ring_vrf() {
+        // Setup ring
+        let ring_size = 1023;
+        let (secrets, publics) = load_ring_data(ring_size);
+
+        let ring_public_keys = vec_public_to_array(publics);
 
         // Specify the index of the prover in the ring
         let prover_idx = 3;
@@ -512,8 +518,8 @@ mod tests {
         // assert_eq!(hex::encode(&secret_key), "2d1edba09f9ca06a5b9b3555a16959f29a841da69ebe5175694ffa4f8be04f1a");
 
         let signature = ring_vrf_sign_inner(RING_DATA.clone(), ring_public_keys.clone(), secret_key, prover_idx, vrf_input_data, aux_data);
-        let signature_hex = hex::encode(&signature);
-        println!("signature_hex: {}", signature_hex);
+        // let signature_hex = hex::encode(&signature);
+        // println!("signature_hex: {}", signature_hex);
 
         // let signature = hex::decode("3d31c3db69741dbeef0b29aeb1f9370d4bbe2365c18586510db8a640101aa42266709f8da7d09a212d5282804e3b824fa8c0c1ffd13a65633ad16f5dab2002bde335816fb40de9cf2ee723ee7621da69b73676d727bc0a28828a08984620f0d625e5c5bd6eb407733c04877094b35c32a9293bc73637cd3da19a00410b74a6cdccbb1be20256cce76f68db1e1e386119870b8bcbc4ac0969f332715754d49009879ad324888180e0064831edc42201301477554180585eb0cf1199de7b512f0298e791ca47f3e2200cf3d7833c55bfacae40174ad122273f5c65aaa2037c132f8c784c7933752c6047b9d4fe7f0cd17aa87b94379b86927a13bc49e20120184f30de45fea3adfcfe06b8ea99354356be270dd9b5816649a80185c395e5d9c1e48fa4c051bc632ebc4ca02c526c4f1216bfb131c10002598e191c21a8a8f48effb0c6de9d38a089ee00ac7937cfee5f1bb43324e62e3177a22f081420a9fe105dbdff7c2f8c65684502abdf52d8100b6502f5287ac5eae2429b215cbc6645422e3eec15627f384e9f837c8186f11a76987971d9dadc92e1f281f6bf3f4a24633e88acedd8c22c23906136ba88a5feda6b7db40f5e488ae2e2b0b7a4537ef1ee3d7021deb02e8571063716be53a61b095c742b5ab6357561011aee3b2d1c5544537d2260aa70ccea3ff11966503faa898f0bf82a49099e4768edef38ef86c3e5269b10d76755144762d7da583f99e2bd0643580c6f2afb16a8ae1d11b79fc2ed33725b871e545ad010fadc7d9ad95a036ec89555bfaf3587c561032c2179a6746c5aecd2f2b32ecc376fcea547ff57730e0f0dff7cf5a7ceb1fa56919c1ea10c6bae6cbfc6bffbf87a7a1cbb6d5309aea20b8b66057789c4e1ed68c43e20547f3417e72143a968095fa5afe39717d7ca9b732d9edec03e0714ce9806848a38196011010a0ba4b34772be196597a855950db398b587b1d96c1abcdf54c45a029db0f1e577cdcd2db8f998827a33b45904fc260852888c2dd2fee32a9b1ed0879647b392f8dcd197db96f8f5ff3378f52b1d7fd6e6b479babb35f45d922ea79959865330f88ba9b4d09c9e84a2072f32ce34").unwrap();
 
@@ -525,26 +531,10 @@ mod tests {
 
     #[test]
     fn test_ring_vrf_verify_invalid_signature() {
-        let ring_size: usize = 1023;
+        let ring_size = 1023;
+        let (_, publics) = load_ring_data(ring_size);
 
-        // Generate secrets and corresponding public keys
-        let mut secrets: Vec<Secret> = Vec::with_capacity(ring_size);
-        let mut publics: Vec<Public> = Vec::with_capacity(ring_size);
-
-        for i in 0..ring_size {
-            let secret = Secret::from_seed(&i.to_le_bytes());
-            let public = secret.public();
-            secrets.push(secret);
-            publics.push(public);
-        }
-
-        let ring_public_keys: Vec<Vec<u8>> = publics.iter()
-            .map(|public| {
-                let mut key_bytes = Vec::new();
-                public.serialize_compressed(&mut key_bytes).unwrap();
-                key_bytes
-            })
-            .collect();
+        let ring_public_keys = vec_public_to_array(publics);
 
         let vrf_input_data = b"foo";
         let aux_data = b"bar";
@@ -556,18 +546,8 @@ mod tests {
 
     #[test]
     fn test_ring_ietf_verify() {
-        let ring_size: usize = 1023;
-
-        // Generate secrets and corresponding public keys
-        let mut secrets: Vec<Secret> = Vec::with_capacity(ring_size);
-        let mut publics: Vec<Public> = Vec::with_capacity(ring_size);
-
-        for i in 0..ring_size {
-            let secret = Secret::from_seed(&i.to_le_bytes());
-            let public = secret.public();
-            secrets.push(secret);
-            publics.push(public);
-        }
+        let ring_size = 1023;
+        let (secrets, publics) = load_ring_data(ring_size);
 
         let vrf_input_data = b"foo";
         let aux_data = b"bar";
@@ -613,7 +593,7 @@ mod tests {
 
         let signature = ietf_vrf_sign_inner(&secret_key, vrf_input_data, aux_data);
 
-        let signature_hex = hex::encode(&signature);
+        // let signature_hex = hex::encode(&signature);
         // println!("signature_hex: {}", signature_hex);
 
         // let signature = hex::decode("3e31c3db69741dbeef0b29aeb1f9370d4bbe2365c18586510db8a640101aa4223354269adf4b85e42049e5473768f0fe75e17cea696bda7c030ede498f091112fda7b475be15c1eb9194bf2a983dd9692de826aba97c120d8d98f3949dfede04").unwrap();
