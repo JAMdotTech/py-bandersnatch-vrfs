@@ -1,4 +1,5 @@
 import unittest
+from os import path
 
 from bandersnatch_vrfs import ring_vrf_sign, ring_vrf_verify, ietf_vrf_sign, secret_from_seed, public_from_secret, \
  ietf_vrf_verify
@@ -14,7 +15,8 @@ class TestRingVRF(unittest.TestCase):
             secret_from_seed(int.to_bytes(i, length=8, byteorder='little')) for i in range(0, cls.ring_size)
         ]
         cls.ring_publics = [public_from_secret(cls.ring_secrets[i]) for i in range(0, cls.ring_size)]
-        with open('../data/zcash-srs-2-11-uncompressed.bin', 'rb') as fp:
+        data_dir = path.join(path.dirname(path.abspath(__file__)), '..', 'data')
+        with open(path.join(data_dir, 'zcash-srs-2-11-uncompressed.bin'), 'rb') as fp:
             cls.ring_data = fp.read()
 
     def test_ring_vrf_sign_verify(self):
@@ -26,8 +28,10 @@ class TestRingVRF(unittest.TestCase):
         aux_data = b"bar"
 
         # Prover signs data
-        signature = ring_vrf_sign(self.ring_data, self.ring_publics, vrf_input_data,
-                                  prover_key_index, vrf_input_data, aux_data)
+        signature = ring_vrf_sign(
+            self.ring_data, self.ring_publics, self.ring_secrets[prover_key_index], prover_key_index,
+            vrf_input_data, aux_data
+        )
 
         self.assertEqual(
             '3d31c3db69741dbeef0b29aeb1f9370d4bbe2365c18586510db8a640101aa4227ea3f8b5df55dc76caf824dce78e02764f94ef5df0bbadb2fc982abd9c7a39c896ecddd194599527e2e08fea913cd1b444eef0e1add09593ab3bb5ce44b4c3be25e5c5bd6eb407733c04877094b35c32a9293bc73637cd3da19a00410b74a6cdfc4237cc9bc41ee56dfb773bd6e3848508536a40c4271a9bcaa8d7352660670bc2bec8199d5675c931357bcaddbfbe1f0c7f8c15f3f327a646952f7d3640e415836e583617737b3ff88aab485b8cf056edda4a0c8a5dff43a37d6768a055009f0aaf53fd0972a39a90a98d428a850292a87b94379b86927a13bc49e20120184f30de45fea3adfcfe06b8ea99354356be270dd9b5816649a80185c395e5d9c1e49935ac45bb41de8f2a16066da3f0ea469d37014838a7f636bc0d4f50ae571dfaf2b9aa3b2a02b9c216b0b4706fac870ca2503472fcadc60ec266664ffefb5c9a3f46f2142ea6b475a1a232c187a8cc09591d5a2b8ab9a6d32739d68282f976f0950c87b6c602e9e2fb4708cbfa705bf9b54c9b53b8b974934f9b9c6031e86d61defdfb9ea994dd897510f00df780c64eef2ccb41c506beeeeab3ce2cedf947672a2635b0e46fcb9eaecb3f12305d7c1ee371e613c8ddbec4e3d9960c0f80fe4bf07e9ca7322528932a0e9d11be731e42788086f33492c466944129a4dd223f5542e15683e7bb01ca453266697a7f234d28f2b7159343e7278bf02c01fe620b201fd89b273c2d171f8ff4adf1ca43f24207ee5b9e19b3724527d46fdf85d9fe4f02ed1fd78d90f317da2306d1f325530697af1c7ec5775c33273a0104f7722332a9cdbe6b737a1e9fc95d4a5ee5616744c2d644df3226aa33b1e24de9ddaced00dc8ff3a5ae1a5bb184ad990e6f9de1cbc1bfae53e904db070b19390aabc01bafbf618b6402bfa1b3fbfbd8c9a9f42f5eb36b9e247d97ba8fb91b1b14072380e9f747ee3afb1b3589a6188d605da2864e0721ed11b3de603ece9448049bec9777b6ae6c515455ec34cc18dad7f4e52404fbd1eb4e2cc11d6a3f1c4f3d70bae0a9326d5f90a7efddbf1098321eb6576e3e',
