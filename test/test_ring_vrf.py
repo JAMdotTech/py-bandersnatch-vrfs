@@ -2,7 +2,7 @@ import unittest
 from os import path
 
 from bandersnatch_vrfs import ring_vrf_sign, ring_vrf_verify, ietf_vrf_sign, secret_from_seed, public_from_secret, \
- ietf_vrf_verify
+ ietf_vrf_verify, ring_commitment
 
 
 class TestRingVRF(unittest.TestCase):
@@ -105,3 +105,11 @@ class TestRingVRF(unittest.TestCase):
             ring_vrf_verify(self.ring_data, self.ring_publics, vrf_input_data, aux_data, signature)
 
         self.assertTrue('Verification error' in str(e.exception))
+
+    def test_ring_commitment(self):
+        commitment_bytes = ring_commitment(self.ring_data, self.ring_publics)
+
+        self.assertEqual(
+            'a18d5a49416835ab96232fca50b7c12b646168f98897f621aea2bf5cf61776c71893f79085e050c0bfb44f2d97c65867a1e635367eec9e596c09c34184555cd6d6089acfebce8c12d39915d6ab6295a91bea86e3a059409396af0ab539672ed696c1b168e2dcc743f9eadda76c041db42d39f27a58418f88c0ea67656a224934e12b5dfc8f0f460a95c2d467fa41907b',
+            commitment_bytes.hex()
+        )

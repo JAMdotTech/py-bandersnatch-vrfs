@@ -443,13 +443,34 @@ fn generate_vrf_proof(secret_key: &[u8], vrf_input_data: &[u8], vrf_output_data:
     Ok(py_proof)
 }
 
+fn ring_commitment_inner(ring_data: Vec<u8>, ring_public_keys: Vec<Vec<u8>>) -> Vec<u8> {
+
+    let ring_set: Vec<Public> = vec_array_to_public(ring_public_keys);
+    let verifier = Verifier::new(ring_data.clone(), ring_set);
+
+    let mut commitment_bytes = Vec::new();
+    verifier.commitment.serialize_compressed(&mut commitment_bytes).unwrap();
+    commitment_bytes
+}
+
+#[pyfunction]
+fn ring_commitment(ring_data: Vec<u8>, ring_public_keys: Vec<Vec<u8>>, py: Python) -> PyResult<Py<PyBytes>> {
+    let commitment_bytes = ring_commitment_inner(
+        ring_data, ring_public_keys
+    );
+
+    Ok(PyBytes::new_bound(py, &commitment_bytes).into())
+}
+
+
 /// A Python module implemented in Rust.
 #[pymodule]
 fn bandersnatch_vrfs(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(ring_vrf_sign, m)?)?;
     m.add_function(wrap_pyfunction!(ring_vrf_verify, m)?)?;
-    m.add_function(wrap_pyfunction!(ietf_vrf_sign, m)?)?;
     m.add_function(wrap_pyfunction!(ring_ietf_vrf_verify, m)?)?;
+    m.add_function(wrap_pyfunction!(ring_commitment, m)?)?;
+    m.add_function(wrap_pyfunction!(ietf_vrf_sign, m)?)?;
     m.add_function(wrap_pyfunction!(ietf_vrf_verify, m)?)?;
     m.add_function(wrap_pyfunction!(secret_from_seed, m)?)?;
     m.add_function(wrap_pyfunction!(public_from_secret, m)?)?;
@@ -562,6 +583,17 @@ mod tests {
 
         assert_eq!(hex::encode(&ring_vrf_output), "6b260bfda2e3ef118c529f30b60dfa4678fbeef3682b55ba002aa8633f1b0364")
 
+    }
+    #[test]
+    fn test_ring_commitment() {
+        let ring_size = 1023;
+        let (_, publics) = load_ring_data(ring_size);
+
+        let ring_public_keys = vec_public_to_array(publics);
+
+        let commitment_bytes = ring_commitment_inner(RING_DATA.clone(), ring_public_keys);
+
+        assert_eq!(hex::encode(&commitment_bytes), "a18d5a49416835ab96232fca50b7c12b646168f98897f621aea2bf5cf61776c71893f79085e050c0bfb44f2d97c65867a1e635367eec9e596c09c34184555cd6d6089acfebce8c12d39915d6ab6295a91bea86e3a059409396af0ab539672ed696c1b168e2dcc743f9eadda76c041db42d39f27a58418f88c0ea67656a224934e12b5dfc8f0f460a95c2d467fa41907b")
     }
 
     #[test]
