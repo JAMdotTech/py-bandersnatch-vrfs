@@ -9,8 +9,6 @@ on:
   push:
     branches:
       - main
-      - master
-      - az-maturin-update
     tags:
       - '*'
   pull_request:
