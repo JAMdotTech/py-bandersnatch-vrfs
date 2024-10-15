@@ -1,5 +1,5 @@
 [build-system]
-requires = ["maturin>=0.14,<0.15"]
+requires = ["maturin>=1.7,<1.8"]
 build-backend = "maturin"
 
 [project]
@@ -9,10 +9,10 @@ description = "Python Bandersnatch VRFs library utilizing the RUST ark-ec-vrfs c
 readme = "README.md"
 
 authors = [
-    { name = "JAMdot Technologies", email = "info@jamdot.tech" }
+    { name = "JAMdot Technologies", email = "devops@jamdot.tech" }
 ]
 
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 license = {file = "LICENSE"}
 classifiers = [
     "Programming Language :: Rust",
