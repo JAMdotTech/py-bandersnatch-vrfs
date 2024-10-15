@@ -2,7 +2,7 @@
 name = "py_bandersnatch_vrfs"
 description = "Python Bandersnatch VRFs library utilizing the RUST ark-ec-vrfs cryptographic library"
 authors=["JAMdot Technologies"]
-version = "0.1.0"
+version = "0.2.0"
 repository = "https://github.com/JAMdotTech/py-bandersnatch-vrfs"
 homepage = "https://github.com/JAMdotTech/py-bandersnatch-vrfs"
 license = "Apache-2.0"
@@ -16,6 +16,6 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = { version = "0.22.2", features = ["extension-module"] }
-ark-ec-vrfs ={ git = "https://github.com/davxy/ark-ec-vrfs", rev = "8cef209", features = ["bandersnatch", "ring", "parallel", "test-vectors"] }
+ark-ec-vrfs ={ git = "https://github.com/davxy/ark-ec-vrfs", rev = "e491b41", features = ["bandersnatch", "ring", "parallel"] }
 hex = "0.4.3"
 lazy_static = "1.5.0"

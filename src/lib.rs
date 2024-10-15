@@ -593,7 +593,7 @@ mod tests {
 
         let commitment_bytes = ring_commitment_inner(RING_DATA.clone(), ring_public_keys);
 
-        assert_eq!(hex::encode(&commitment_bytes), "a18d5a49416835ab96232fca50b7c12b646168f98897f621aea2bf5cf61776c71893f79085e050c0bfb44f2d97c65867a1e635367eec9e596c09c34184555cd6d6089acfebce8c12d39915d6ab6295a91bea86e3a059409396af0ab539672ed696c1b168e2dcc743f9eadda76c041db42d39f27a58418f88c0ea67656a224934e12b5dfc8f0f460a95c2d467fa41907b")
+        assert_eq!(hex::encode(&commitment_bytes), "a722e5a7928fae5fffb6ec1be5831d96e357c5a075c17b89fbf3500705c5efa7c028946920c1306f671b56e7e680aa4faa1c5b0f7a49d8db2588c6b7913ba583a518e7ec2ca694846d7c664cbfde421d4508c6ce31af652f1220e84955ad0eb896c1b168e2dcc743f9eadda76c041db42d39f27a58418f88c0ea67656a224934e12b5dfc8f0f460a95c2d467fa41907b")
     }
 
     #[test]
