@@ -47,7 +47,7 @@ dependencies = [
 [[package]]
 name = "ark-ec-vrfs"
 version = "0.1.0"
-source = "git+https://github.com/davxy/ark-ec-vrfs?rev=8cef209#8cef20972fd808780f0462c28162b3030a195460"
+source = "git+https://github.com/davxy/ark-ec-vrfs?rev=e491b41#e491b41b48d9132f59ff2a4d4f1c6c3e853deab7"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -168,10 +168,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "arrayref"
-version = "0.3.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d151e35f61089500b617991b791fc8bfd237ae50cd5950803758a179b41e67a"
+name = "ark-transcript"
+version = "0.0.2"
+source = "git+https://github.com/w3f/ark-transcript?rev=288e49d#288e49ddba6f8f8e67be6822715afe36b11c4e65"
+dependencies = [
+ "ark-ff",
+ "ark-serialize",
+ "ark-std",
+ "digest",
+ "rand_core",
+ "sha3",
+]
 
 [[package]]
 name = "arrayvec"
@@ -192,17 +199,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "46502ad458c9a52b69d4d4d32775c788b7a1b85e8bc9d482d92250fc0e3f8efe"
 dependencies = [
  "digest",
-]
-
-[[package]]
-name = "blake2b_simd"
-version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23285ad32269793932e830392f2fe2f83e26488fd3ec778883a93c8323735780"
-dependencies = [
- "arrayref",
- "arrayvec",
- "constant_time_eq",
 ]
 
 [[package]]
@@ -229,26 +225,17 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 [[package]]
 name = "common"
 version = "0.1.0"
-source = "git+https://github.com/davxy/ring-proof?branch=extended#6524d3a17b2ddadcfca2f2934d3aed7bb129fa9f"
+source = "git+https://github.com/davxy/ring-proof?rev=d3e37f9#d3e37f99a9412d65823ee7bd887eb2d5c9b304f7"
 dependencies = [
  "ark-ec",
  "ark-ff",
  "ark-poly",
  "ark-serialize",
  "ark-std",
- "blake2b_simd",
  "fflonk",
  "getrandom_or_panic",
- "merlin",
- "rand_chacha",
  "rayon",
 ]
-
-[[package]]
-name = "constant_time_eq"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f7144d30dcf0fafbce74250a3963025d8d52177934239851c917d29f1df280c2"
 
 [[package]]
 name = "cpufeatures"
@@ -511,7 +498,7 @@ dependencies = [
 
 [[package]]
 name = "py_bandersnatch_vrfs"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "ark-ec-vrfs",
  "hex",
@@ -644,18 +631,18 @@ dependencies = [
 [[package]]
 name = "ring"
 version = "0.1.0"
-source = "git+https://github.com/davxy/ring-proof?branch=extended#6524d3a17b2ddadcfca2f2934d3aed7bb129fa9f"
+source = "git+https://github.com/davxy/ring-proof?rev=d3e37f9#d3e37f99a9412d65823ee7bd887eb2d5c9b304f7"
 dependencies = [
  "ark-ec",
  "ark-ff",
  "ark-poly",
  "ark-serialize",
  "ark-std",
+ "ark-transcript",
  "arrayvec",
  "blake2",
  "common",
  "fflonk",
- "merlin",
  "rayon",
 ]
 
@@ -683,6 +670,16 @@ dependencies = [
  "cfg-if",
  "cpufeatures",
  "digest",
+]
+
+[[package]]
+name = "sha3"
+version = "0.10.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75872d278a8f37ef87fa0ddbda7802605cb18344497949862c0d4dcb291eba60"
+dependencies = [
+ "digest",
+ "keccak",
 ]
 
 [[package]]
