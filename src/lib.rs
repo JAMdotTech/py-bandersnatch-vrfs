@@ -219,16 +219,23 @@ impl Verifier {
 pub type PublicKey = [u8; 32];
 pub type SecretKey = [u8; 32];
 
-fn vec_array_to_public(ring_public_keys: Vec<Vec<u8>>) -> Vec<Public> {
+fn vec_array_to_public(ring_data: &Vec<u8>, ring_public_keys: Vec<Vec<u8>>) -> Vec<Public> {
+    let fallback_public = Public::from(
+        ring_context(&ring_data, ring_public_keys.len()).padding_point()
+    );
+
     let ring_set: Vec<Public> = ring_public_keys.iter()
-        .map(|key_bytes| Public::deserialize_compressed(&mut &key_bytes[..]).unwrap())
+        .map(|key_bytes| {
+            Public::deserialize_compressed(&mut &key_bytes[..])
+                .unwrap_or_else(|_| fallback_public.clone())
+        })
         .collect();
     ring_set
 }
 
 fn ring_vrf_sign_inner(ring_data: Vec<u8>, ring_public_keys: Vec<Vec<u8>>, secret: Secret, prover_key_index: usize, vrf_input_data: &[u8],
                  aux_data: &[u8]) -> Vec<u8> {
-    let ring_set: Vec<Public> = vec_array_to_public(ring_public_keys);
+    let ring_set: Vec<Public> = vec_array_to_public(&ring_data, ring_public_keys);
 
     // Determine prover in the ring_set
     let prover = Prover::new(ring_set.clone(), secret,  prover_key_index);
@@ -259,7 +266,7 @@ fn ring_vrf_verify_inner(
         ring_signature: &[u8],
     ) -> Result<[u8; 32], VrfError> {
 
-    let ring_set: Vec<Public> = vec_array_to_public(ring_public_keys);
+    let ring_set: Vec<Public> = vec_array_to_public(&ring_data, ring_public_keys);
 
     let verifier = Verifier::new(ring_data.clone(), ring_set);
 
@@ -285,7 +292,7 @@ fn ring_vrf_verify(
 
 fn ring_ietf_vrf_verify_inner(ring_data: Vec<u8>, ring_public_keys: Vec<Vec<u8>>, signer_key_index: usize, vrf_input_data: &[u8],
         aux_data: &[u8], signature: &[u8],) -> Result<[u8; 32], VrfError> {
-    let ring_set: Vec<Public> = vec_array_to_public(ring_public_keys);
+    let ring_set: Vec<Public> = vec_array_to_public(&ring_data, ring_public_keys);
 
     let verifier = Verifier::new(ring_data, ring_set);
 
@@ -445,7 +452,7 @@ fn generate_vrf_proof(secret_key: &[u8], vrf_input_data: &[u8], vrf_output_data:
 
 fn ring_commitment_inner(ring_data: Vec<u8>, ring_public_keys: Vec<Vec<u8>>) -> Vec<u8> {
 
-    let ring_set: Vec<Public> = vec_array_to_public(ring_public_keys);
+    let ring_set: Vec<Public> = vec_array_to_public(&ring_data, ring_public_keys);
     let verifier = Verifier::new(ring_data.clone(), ring_set);
 
     let mut commitment_bytes = Vec::new();
@@ -590,7 +597,6 @@ mod tests {
         let (_, publics) = load_ring_data(ring_size);
 
         let ring_public_keys = vec_public_to_array(publics);
-
         let commitment_bytes = ring_commitment_inner(RING_DATA.clone(), ring_public_keys);
 
         assert_eq!(hex::encode(&commitment_bytes), "a722e5a7928fae5fffb6ec1be5831d96e357c5a075c17b89fbf3500705c5efa7c028946920c1306f671b56e7e680aa4faa1c5b0f7a49d8db2588c6b7913ba583a518e7ec2ca694846d7c664cbfde421d4508c6ce31af652f1220e84955ad0eb896c1b168e2dcc743f9eadda76c041db42d39f27a58418f88c0ea67656a224934e12b5dfc8f0f460a95c2d467fa41907b")
