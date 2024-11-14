@@ -2,7 +2,7 @@ import unittest
 from os import path
 
 from bandersnatch_vrfs import ring_vrf_sign, ring_vrf_verify, ietf_vrf_sign, secret_from_seed, public_from_secret, \
- ietf_vrf_verify, ring_commitment
+ ietf_vrf_verify, ring_commitment, vrf_output
 
 
 class TestRingVRF(unittest.TestCase):
@@ -18,6 +18,17 @@ class TestRingVRF(unittest.TestCase):
         data_dir = path.join(path.dirname(path.abspath(__file__)), '..', 'data')
         with open(path.join(data_dir, 'zcash-srs-2-11-uncompressed.bin'), 'rb') as fp:
             cls.ring_data = fp.read()
+
+    def test_vrf_output(self):
+        prover_key_index = 3
+        vrf_input_data = b"foo"
+
+        output = vrf_output(self.ring_secrets[prover_key_index], vrf_input_data)
+
+        self.assertEqual(
+            '6b260bfda2e3ef118c529f30b60dfa4678fbeef3682b55ba002aa8633f1b0364',
+            output.hex()
+        )
 
     def test_ring_vrf_sign_verify(self):
 

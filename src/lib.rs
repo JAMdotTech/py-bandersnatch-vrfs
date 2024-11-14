@@ -97,25 +97,6 @@ impl Prover {
         signature.serialize_compressed(&mut buf).unwrap();
         buf
     }
-
-    // /// Non-Anonymous VRF signature.
-    // ///
-    // /// Used for ticket claiming during block production.
-    // /// Not used with Safrole test vectors.
-    // pub fn ietf_vrf_sign(&self, vrf_input_data: &[u8], aux_data: &[u8]) -> Vec<u8> {
-    //     use ark_ec_vrfs::ietf::Prover as _;
-    //
-    //     let input = vrf_input_point(vrf_input_data);
-    //     let output = self.secret.output(input);
-    //
-    //     let proof = self.secret.prove(input, output, aux_data);
-    //
-    //     // Output and IETF Proof bundled together (as per section 2.2)
-    //     let signature = IetfVrfSignature { output, proof };
-    //     let mut buf = Vec::new();
-    //     signature.serialize_compressed(&mut buf).unwrap();
-    //     buf
-    // }
 }
 
 type RingCommitment = ark_ec_vrfs::ring::RingCommitment<BandersnatchSha512Ell2>;
@@ -316,10 +297,29 @@ fn ring_ietf_vrf_verify(
     Ok(PyBytes::new_bound(py, &vrf_output_hash).into())
 }
 
+fn vrf_output_inner(secret: &Secret, vrf_input_data: &[u8]) -> Vec<u8> {
+
+    let input = vrf_input_point(vrf_input_data);
+    let output = secret.output(input);
+
+    let vrf_output_hash: [u8; 32] = output.hash()[..32].try_into().unwrap();
+    vrf_output_hash.to_vec()
+}
+
+#[pyfunction]
+fn vrf_output(secret_key: &[u8], vrf_input_data: &[u8], py: Python) -> PyResult<Py<PyBytes>> {
+
+    let secret = Secret::deserialize_compressed(
+        &mut &secret_key[..]
+    ).map_err(|err| PyValueError::new_err(format!("Invalid secret_key: {}", err.to_string())))?;
+
+   let vrf_output = crate::vrf_output_inner(&secret, vrf_input_data);
+   Ok(PyBytes::new_bound(py, &vrf_output).into())
+}
+
 fn ietf_vrf_sign_inner(secret_key: &[u8], vrf_input_data: &[u8], aux_data: &[u8]) -> Vec<u8> {
     use ark_ec_vrfs::ietf::Prover as _;
 
-    // let secret = Secret::from_seed(&secret_key);
     let secret = Secret::deserialize_compressed(&mut &secret_key[..]).unwrap();
     let input = vrf_input_point(vrf_input_data);
     let output = secret.output(input);
@@ -478,6 +478,7 @@ fn bandersnatch_vrfs(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(ring_ietf_vrf_verify, m)?)?;
     m.add_function(wrap_pyfunction!(ring_commitment, m)?)?;
     m.add_function(wrap_pyfunction!(ietf_vrf_sign, m)?)?;
+    m.add_function(wrap_pyfunction!(vrf_output, m)?)?;
     m.add_function(wrap_pyfunction!(ietf_vrf_verify, m)?)?;
     m.add_function(wrap_pyfunction!(secret_from_seed, m)?)?;
     m.add_function(wrap_pyfunction!(public_from_secret, m)?)?;
@@ -535,7 +536,7 @@ mod tests {
         let ring_size = 1023;
         let (secrets, publics) = load_ring_data(ring_size);
 
-        let ring_public_keys = vec_public_to_array(publics);
+        let ring_public_keys = vec_public_to_array(publics.clone());
 
         // Specify the index of the prover in the ring
         let prover_idx = 3;
@@ -545,13 +546,20 @@ mod tests {
 
         let secret = secrets[prover_idx].clone();
 
+        let vrf_output = vrf_output_inner(&secret, vrf_input_data);
+        assert_eq!(hex::encode(&vrf_output), "6b260bfda2e3ef118c529f30b60dfa4678fbeef3682b55ba002aa8633f1b0364");
+
         let signature = ring_vrf_sign_inner(RING_DATA.clone(), ring_public_keys.clone(), secret, prover_idx, vrf_input_data, aux_data);
         // let signature_hex = hex::encode(&signature);
         // println!("signature_hex: {}", signature_hex);
 
         let ring_vrf_output = ring_vrf_verify_inner(RING_DATA.clone(), ring_public_keys.clone(), vrf_input_data, aux_data, &signature).unwrap();
-        // println!("ring_vrf_output: {}", hex::encode(&ring_vrf_output));
         assert_eq!(hex::encode(&ring_vrf_output), "6b260bfda2e3ef118c529f30b60dfa4678fbeef3682b55ba002aa8633f1b0364");
+
+        let verifier = Verifier::new(RING_DATA.clone(), publics);
+        let ietf_vrf_output = verifier.ietf_vrf_verify(vrf_input_data, aux_data, &signature, 3).unwrap();
+
+        assert_eq!(hex::encode(&ietf_vrf_output), "6b260bfda2e3ef118c529f30b60dfa4678fbeef3682b55ba002aa8633f1b0364");
 
     }
 
@@ -581,6 +589,10 @@ mod tests {
 
         let mut secret_key = Vec::new();
         secrets[signer_key_index].serialize_compressed(&mut secret_key).unwrap();
+
+        let vrf_output = vrf_output_inner(&secrets[signer_key_index], vrf_input_data);
+        assert_eq!(hex::encode(&vrf_output), "6b260bfda2e3ef118c529f30b60dfa4678fbeef3682b55ba002aa8633f1b0364");
+
 
         let signature = ietf_vrf_sign_inner(&secret_key, vrf_input_data, aux_data);
 
@@ -612,24 +624,17 @@ mod tests {
         let secret_key_hex = hex::encode(&secret_key);
 
         assert_eq!(secret_key_hex, "2d1edba09f9ca06a5b9b3555a16959f29a841da69ebe5175694ffa4f8be04f1a");
-        // println!("Secret key: {}", secret_key_hex);
 
         let mut public_key = Vec::new();
         secret.public().serialize_compressed(&mut public_key).unwrap();
         let public_key_hex = hex::encode(&public_key);
 
         assert_eq!(public_key_hex, "7518285dfdb55145d235f129b81192cd491abedbe1b1393c4592d6ff7a01d015");
-        // println!("public_key_hex: {}", public_key_hex);
 
         let vrf_input_data = b"foo";
         let aux_data = b"bar";
 
         let signature = ietf_vrf_sign_inner(&secret_key, vrf_input_data, aux_data);
-
-        // let signature_hex = hex::encode(&signature);
-        // println!("signature_hex: {}", signature_hex);
-
-        // let signature = hex::decode("3e31c3db69741dbeef0b29aeb1f9370d4bbe2365c18586510db8a640101aa4223354269adf4b85e42049e5473768f0fe75e17cea696bda7c030ede498f091112fda7b475be15c1eb9194bf2a983dd9692de826aba97c120d8d98f3949dfede04").unwrap();
 
         match ietf_vrf_verify_inner(&public_key, vrf_input_data, aux_data, &signature) {
             Ok(result) => assert_eq!(hex::encode(&result), "6b260bfda2e3ef118c529f30b60dfa4678fbeef3682b55ba002aa8633f1b0364"),
