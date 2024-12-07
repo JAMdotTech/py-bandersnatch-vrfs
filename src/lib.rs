@@ -236,7 +236,7 @@ fn ring_vrf_sign(ring_data: Vec<u8>, ring_public_keys: Vec<Vec<u8>>, secret_key:
     ).map_err(|err| PyValueError::new_err(format!("Invalid secret_key: {}", err.to_string())))?;
 
     let ring_signature = ring_vrf_sign_inner(ring_data, ring_public_keys, secret, prover_key_index, vrf_input_data, aux_data);
-    Ok(PyBytes::new_bound(py, &ring_signature).into())
+    Ok(PyBytes::new(py, &ring_signature).into())
 }
 
 fn ring_vrf_verify_inner(
@@ -268,7 +268,7 @@ fn ring_vrf_verify(
         ring_data, ring_public_keys, vrf_input_data, aux_data, ring_signature
     ).map_err(|err| PyValueError::new_err(format!("Verify failed: {}", err.to_string())))?;
 
-    Ok(PyBytes::new_bound(py, &ring_vrf_output).into())
+    Ok(PyBytes::new(py, &ring_vrf_output).into())
 }
 
 fn ring_ietf_vrf_verify_inner(ring_data: Vec<u8>, ring_public_keys: Vec<Vec<u8>>, signer_key_index: usize, vrf_input_data: &[u8],
@@ -294,7 +294,7 @@ fn ring_ietf_vrf_verify(
     let vrf_output_hash = ring_ietf_vrf_verify_inner(
         ring_data, ring_public_keys, signer_key_index, vrf_input_data, aux_data, ring_signature
     ).unwrap();
-    Ok(PyBytes::new_bound(py, &vrf_output_hash).into())
+    Ok(PyBytes::new(py, &vrf_output_hash).into())
 }
 
 fn vrf_output_inner(secret: &Secret, vrf_input_data: &[u8]) -> Vec<u8> {
@@ -314,7 +314,7 @@ fn vrf_output(secret_key: &[u8], vrf_input_data: &[u8], py: Python) -> PyResult<
     ).map_err(|err| PyValueError::new_err(format!("Invalid secret_key: {}", err.to_string())))?;
 
    let vrf_output = crate::vrf_output_inner(&secret, vrf_input_data);
-   Ok(PyBytes::new_bound(py, &vrf_output).into())
+   Ok(PyBytes::new(py, &vrf_output).into())
 }
 
 fn ietf_vrf_sign_inner(secret_key: &[u8], vrf_input_data: &[u8], aux_data: &[u8]) -> Vec<u8> {
@@ -336,7 +336,7 @@ fn ietf_vrf_sign_inner(secret_key: &[u8], vrf_input_data: &[u8], aux_data: &[u8]
 #[pyfunction]
 fn ietf_vrf_sign(secret_key: &[u8], vrf_input_data: &[u8], aux_data: &[u8], py: Python) -> PyResult<Py<PyBytes>> {
    let signature = ietf_vrf_sign_inner(secret_key, vrf_input_data, aux_data);
-   Ok(PyBytes::new_bound(py, &signature).into())
+   Ok(PyBytes::new(py, &signature).into())
 }
 
 #[derive(Debug)]
@@ -381,7 +381,7 @@ fn ietf_vrf_verify(public_key: &[u8], vrf_input_data: &[u8], aux_data: &[u8], si
         public_key, vrf_input_data, aux_data, signature
     ).map_err(|err| PyValueError::new_err(format!("Verify failed: {}", err.to_string())))?;
 
-    Ok(PyBytes::new_bound(py, &ietf_vrf_output).into())
+    Ok(PyBytes::new(py, &ietf_vrf_output).into())
 }
 
 #[pyfunction]
@@ -389,7 +389,7 @@ fn secret_from_seed(seed: &[u8], py: Python) -> PyResult<Py<PyBytes>> {
     let secret = Secret::from_seed(&seed);
     let mut secret_key = Vec::new();
     secret.serialize_compressed(&mut secret_key).unwrap();
-    Ok(PyBytes::new_bound(py, &secret_key).into())
+    Ok(PyBytes::new(py, &secret_key).into())
 }
 
 #[pyfunction]
@@ -397,7 +397,7 @@ fn public_from_secret(secret_key: &[u8], py: Python) -> PyResult<Py<PyBytes>> {
     let secret = Secret::deserialize_compressed(&mut &secret_key[..]).unwrap();
     let mut public_key = Vec::new();
     secret.public().serialize_compressed(&mut public_key).unwrap();
-    Ok(PyBytes::new_bound(py, &public_key).into())
+    Ok(PyBytes::new(py, &public_key).into())
 }
 
 fn serialize_to_vec<S: CanonicalSerialize>(item: &S) -> Vec<u8> {
@@ -421,8 +421,8 @@ impl PyProof {
     #[new]
     fn new(py: Python, c_data: Vec<u8>, s_data: Vec<u8>) -> Self {
         PyProof {
-            c: PyBytes::new_bound(py, &c_data).into(),
-            s: PyBytes::new_bound(py, &s_data).into(),
+            c: PyBytes::new(py, &c_data).into(),
+            s: PyBytes::new(py, &s_data).into(),
         }
     }
 }
@@ -466,7 +466,7 @@ fn ring_commitment(ring_data: Vec<u8>, ring_public_keys: Vec<Vec<u8>>, py: Pytho
         ring_data, ring_public_keys
     );
 
-    Ok(PyBytes::new_bound(py, &commitment_bytes).into())
+    Ok(PyBytes::new(py, &commitment_bytes).into())
 }
 
 
