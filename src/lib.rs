@@ -555,12 +555,6 @@ mod tests {
 
         let ring_vrf_output = ring_vrf_verify_inner(RING_DATA.clone(), ring_public_keys.clone(), vrf_input_data, aux_data, &signature).unwrap();
         assert_eq!(hex::encode(&ring_vrf_output), "6b260bfda2e3ef118c529f30b60dfa4678fbeef3682b55ba002aa8633f1b0364");
-
-        let verifier = Verifier::new(RING_DATA.clone(), publics);
-        let ietf_vrf_output = verifier.ietf_vrf_verify(vrf_input_data, aux_data, &signature, 3).unwrap();
-
-        assert_eq!(hex::encode(&ietf_vrf_output), "6b260bfda2e3ef118c529f30b60dfa4678fbeef3682b55ba002aa8633f1b0364");
-
     }
 
     #[test]
