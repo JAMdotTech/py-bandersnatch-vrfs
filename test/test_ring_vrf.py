@@ -116,6 +116,6 @@ class TestRingVRF(unittest.TestCase):
         commitment_bytes = ring_commitment(self.ring_data, self.ring_publics)
 
         self.assertEqual(
-            'a722e5a7928fae5fffb6ec1be5831d96e357c5a075c17b89fbf3500705c5efa7c028946920c1306f671b56e7e680aa4faa1c5b0f7a49d8db2588c6b7913ba583a518e7ec2ca694846d7c664cbfde421d4508c6ce31af652f1220e84955ad0eb896c1b168e2dcc743f9eadda76c041db42d39f27a58418f88c0ea67656a224934e12b5dfc8f0f460a95c2d467fa41907b',
+            '826744cb1504e259cde1cc3591b3e8422a94e326efe2d07893ddd1f9ccfeb9e0c7de8722e20629382536c16d8b5be6e0872e00e53b290884737ba00f8be6f7f8ddc3bd32a2023fe27339fcec08bb5011bd1fef14ea98876bcf64cb88c003190c96c1b168e2dcc743f9eadda76c041db42d39f27a58418f88c0ea67656a224934e12b5dfc8f0f460a95c2d467fa41907b',
             commitment_bytes.hex()
         )
