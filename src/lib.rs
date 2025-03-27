@@ -1,15 +1,18 @@
 use pyo3::prelude::*;
 
-use ark_ec_vrfs::suites::bandersnatch::edwards as bandersnatch;
-use ark_ec_vrfs::{prelude::ark_serialize, suites::bandersnatch::edwards::RingContext};
-use bandersnatch::{IetfProof, Input, Output, Public, RingProof, Secret};
+use ark_ec_vrfs::reexports::{
+    ark_serialize::{self, CanonicalDeserialize, CanonicalSerialize},
+};
+use ark_ec_vrfs::{suites::bandersnatch};
+use bandersnatch::{
+    BandersnatchSha512Ell2, IetfProof, Input, Output, Public, RingProof,
+    RingProofParams, Secret,
+};
 
-use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use pyo3::types::PyBytes;
 use std::fmt;
 use std::error::Error;
 use ark_ec_vrfs::ietf::{Proof};
-use ark_ec_vrfs::suites::bandersnatch::edwards::BandersnatchSha512Ell2;
 use pyo3::exceptions::PyValueError;
 
 // This is the IETF `Prove` procedure output as described in section 2.2
@@ -29,15 +32,11 @@ struct RingVrfSignature {
     proof: RingProof,
 }
 
-// "Static" ring context data
-fn ring_context(ring_data: &Vec<u8>, ring_size: usize) -> &'static RingContext {
-    use std::sync::OnceLock;
-    static RING_CTX: OnceLock<RingContext> = OnceLock::new();
-    RING_CTX.get_or_init(|| {
-        use bandersnatch::PcsParams;
-        let pcs_params = PcsParams::deserialize_uncompressed_unchecked(&mut &ring_data[..]).unwrap();
-        RingContext::from_srs(ring_size, pcs_params).unwrap()
-    })
+// ring context data
+fn ring_context(ring_data: &Vec<u8>, ring_size: usize) -> RingProofParams {
+    use bandersnatch::PcsParams;
+    let pcs_params = PcsParams::deserialize_uncompressed_unchecked(&mut &ring_data[..]).unwrap();
+    RingProofParams::from_pcs_params(ring_size, pcs_params).unwrap()
 }
 
 // Construct VRF Input Point from arbitrary data (section 1.2)
@@ -200,10 +199,8 @@ impl Verifier {
 pub type PublicKey = [u8; 32];
 pub type SecretKey = [u8; 32];
 
-fn vec_array_to_public(ring_data: &Vec<u8>, ring_public_keys: Vec<Vec<u8>>) -> Vec<Public> {
-    let fallback_public = Public::from(
-        ring_context(&ring_data, ring_public_keys.len()).padding_point()
-    );
+fn vec_array_to_public(ring_public_keys: Vec<Vec<u8>>) -> Vec<Public> {
+    let fallback_public = Public::from(RingProofParams::padding_point());
 
     let ring_set: Vec<Public> = ring_public_keys.iter()
         .map(|key_bytes| {
@@ -216,7 +213,7 @@ fn vec_array_to_public(ring_data: &Vec<u8>, ring_public_keys: Vec<Vec<u8>>) -> V
 
 fn ring_vrf_sign_inner(ring_data: Vec<u8>, ring_public_keys: Vec<Vec<u8>>, secret: Secret, prover_key_index: usize, vrf_input_data: &[u8],
                  aux_data: &[u8]) -> Vec<u8> {
-    let ring_set: Vec<Public> = vec_array_to_public(&ring_data, ring_public_keys);
+    let ring_set: Vec<Public> = vec_array_to_public(ring_public_keys);
 
     // Determine prover in the ring_set
     let prover = Prover::new(ring_set.clone(), secret,  prover_key_index);
@@ -247,7 +244,7 @@ fn ring_vrf_verify_inner(
         ring_signature: &[u8],
     ) -> Result<[u8; 32], VrfError> {
 
-    let ring_set: Vec<Public> = vec_array_to_public(&ring_data, ring_public_keys);
+    let ring_set: Vec<Public> = vec_array_to_public(ring_public_keys);
 
     let verifier = Verifier::new(ring_data.clone(), ring_set);
 
@@ -273,7 +270,7 @@ fn ring_vrf_verify(
 
 fn ring_ietf_vrf_verify_inner(ring_data: Vec<u8>, ring_public_keys: Vec<Vec<u8>>, signer_key_index: usize, vrf_input_data: &[u8],
         aux_data: &[u8], signature: &[u8],) -> Result<[u8; 32], VrfError> {
-    let ring_set: Vec<Public> = vec_array_to_public(&ring_data, ring_public_keys);
+    let ring_set: Vec<Public> = vec_array_to_public(ring_public_keys);
 
     let verifier = Verifier::new(ring_data, ring_set);
 
@@ -452,7 +449,7 @@ fn generate_vrf_proof(secret_key: &[u8], vrf_input_data: &[u8], vrf_output_data:
 
 fn ring_commitment_inner(ring_data: Vec<u8>, ring_public_keys: Vec<Vec<u8>>) -> Vec<u8> {
 
-    let ring_set: Vec<Public> = vec_array_to_public(&ring_data, ring_public_keys);
+    let ring_set: Vec<Public> = vec_array_to_public(ring_public_keys);
     let verifier = Verifier::new(ring_data.clone(), ring_set);
 
     let mut commitment_bytes = Vec::new();
