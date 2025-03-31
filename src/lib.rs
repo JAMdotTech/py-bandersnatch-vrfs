@@ -1,9 +1,9 @@
 use pyo3::prelude::*;
 
-use ark_ec_vrfs::reexports::{
+use ark_vrf::reexports::{
     ark_serialize::{self, CanonicalDeserialize, CanonicalSerialize},
 };
-use ark_ec_vrfs::{suites::bandersnatch};
+use ark_vrf::{suites::bandersnatch};
 use bandersnatch::{
     BandersnatchSha512Ell2, IetfProof, Input, Output, Public, RingProof,
     RingProofParams, Secret,
@@ -12,7 +12,7 @@ use bandersnatch::{
 use pyo3::types::PyBytes;
 use std::fmt;
 use std::error::Error;
-use ark_ec_vrfs::ietf::{Proof};
+use ark_vrf::ietf::{Proof};
 use pyo3::exceptions::PyValueError;
 
 // This is the IETF `Prove` procedure output as described in section 2.2
@@ -42,14 +42,14 @@ fn ring_context(ring_data: &Vec<u8>, ring_size: usize) -> RingProofParams {
 // Construct VRF Input Point from arbitrary data (section 1.2)
 fn vrf_input_point(vrf_input_data: &[u8]) -> Input {
     let point =
-        <BandersnatchSha512Ell2 as ark_ec_vrfs::Suite>::data_to_point(vrf_input_data)
+        <BandersnatchSha512Ell2 as ark_vrf::Suite>::data_to_point(vrf_input_data)
             .unwrap();
     Input::from(point)
 }
 
 fn vrf_output_point(vrf_output_data: &[u8]) -> Output {
     let point =
-        <BandersnatchSha512Ell2 as ark_ec_vrfs::Suite>::data_to_point(vrf_output_data)
+        <BandersnatchSha512Ell2 as ark_vrf::Suite>::data_to_point(vrf_output_data)
             .unwrap();
     Output::from(point)
 }
@@ -76,7 +76,7 @@ impl Prover {
     ///
     /// Used for tickets submission.
     pub fn ring_vrf_sign(&self, ring_data: &Vec<u8>, vrf_input_data: &[u8], aux_data: &[u8]) -> Vec<u8> {
-        use ark_ec_vrfs::ring::Prover as _;
+        use ark_vrf::ring::Prover as _;
 
         let input = vrf_input_point(vrf_input_data);
         let output = self.secret.output(input);
@@ -98,7 +98,7 @@ impl Prover {
     }
 }
 
-type RingCommitment = ark_ec_vrfs::ring::RingCommitment<BandersnatchSha512Ell2>;
+type RingCommitment = ark_vrf::ring::RingCommitment<BandersnatchSha512Ell2>;
 
 // Verifier actor.
 struct Verifier {
@@ -129,7 +129,7 @@ impl Verifier {
         aux_data: &[u8],
         signature: &[u8],
     ) -> Result<[u8; 32], VrfError> {
-        use ark_ec_vrfs::ring::Verifier as _;
+        use ark_vrf::ring::Verifier as _;
 
         let signature = RingVrfSignature::deserialize_compressed(signature).map_err(|_| VrfError::InvalidSignature)?;
 
@@ -170,7 +170,7 @@ impl Verifier {
         signature: &[u8],
         signer_key_index: usize,
     ) -> Result<[u8; 32], VrfError> {
-        use ark_ec_vrfs::ietf::Verifier as _;
+        use ark_vrf::ietf::Verifier as _;
 
         let signature = IetfVrfSignature::deserialize_compressed(signature).unwrap();
 
@@ -315,7 +315,7 @@ fn vrf_output(secret_key: &[u8], vrf_input_data: &[u8], py: Python) -> PyResult<
 }
 
 fn ietf_vrf_sign_inner(secret_key: &[u8], vrf_input_data: &[u8], aux_data: &[u8]) -> Vec<u8> {
-    use ark_ec_vrfs::ietf::Prover as _;
+    use ark_vrf::ietf::Prover as _;
 
     let secret = Secret::deserialize_compressed(&mut &secret_key[..]).unwrap();
     let input = vrf_input_point(vrf_input_data);
@@ -356,7 +356,7 @@ impl fmt::Display for VrfError {
 impl Error for VrfError {}
 
 fn ietf_vrf_verify_inner(public_key: &[u8], vrf_input_data: &[u8], aux_data: &[u8], signature: &[u8]) -> Result<[u8; 32], VrfError> {
-    use ark_ec_vrfs::ietf::Verifier as _;
+    use ark_vrf::ietf::Verifier as _;
 
     let public = Public::deserialize_compressed(public_key).unwrap();
     let signature = IetfVrfSignature::deserialize_compressed(signature).map_err(|_| VrfError::VerificationError)?;
@@ -433,7 +433,7 @@ impl From<Proof<BandersnatchSha512Ell2>> for PyProof {
 }
 
 fn generate_vrf_proof_inner(secret_key: &[u8], vrf_input_data: &[u8], vrf_output_data: &[u8], aux_data: &[u8]) -> Proof<BandersnatchSha512Ell2> {
-    use ark_ec_vrfs::ietf::{Prover};
+    use ark_vrf::ietf::{Prover};
     let secret = Secret::deserialize_compressed(&mut &secret_key[..]).unwrap();
     let input = vrf_input_point(vrf_input_data);
     let output = vrf_output_point(vrf_output_data);
@@ -487,7 +487,7 @@ fn bandersnatch_vrfs(m: &Bound<'_, PyModule>) -> PyResult<()> {
 mod tests {
     use super::*;
     use std::{fs::File, io::Read};
-    use ark_ec_vrfs::Public;
+    use ark_vrf::Public;
     use lazy_static::lazy_static;
 
     lazy_static! {

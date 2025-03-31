@@ -55,25 +55,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ark-ec-vrfs"
-version = "0.1.2"
-source = "git+https://github.com/davxy/ark-ec-vrfs?tag=v0.1.2#dd5ab3585b264bb23775b4085952ec137b288707"
-dependencies = [
- "ark-bls12-381",
- "ark-ec",
- "ark-ed-on-bls12-381-bandersnatch",
- "ark-ff",
- "ark-serialize",
- "ark-std",
- "digest",
- "rand_chacha",
- "rayon",
- "sha2",
- "w3f-ring-proof",
- "zeroize",
-]
-
-[[package]]
 name = "ark-ed-on-bls12-381-bandersnatch"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -193,6 +174,26 @@ dependencies = [
  "digest",
  "rand_core",
  "sha3",
+]
+
+[[package]]
+name = "ark-vrf"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9501da18569b2afe0eb934fb7afd5a247d238b94116155af4dd068f319adfe6d"
+dependencies = [
+ "ark-bls12-381",
+ "ark-ec",
+ "ark-ed-on-bls12-381-bandersnatch",
+ "ark-ff",
+ "ark-serialize",
+ "ark-std",
+ "digest",
+ "rand_chacha",
+ "rayon",
+ "sha2",
+ "w3f-ring-proof",
+ "zeroize",
 ]
 
 [[package]]
@@ -501,9 +502,9 @@ dependencies = [
 
 [[package]]
 name = "py_bandersnatch_vrfs"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
- "ark-ec-vrfs",
+ "ark-vrf",
  "hex",
  "lazy_static",
  "pyo3",
