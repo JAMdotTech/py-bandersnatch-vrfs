@@ -204,7 +204,7 @@ fn vec_array_to_public(ring_public_keys: Vec<Vec<u8>>) -> Vec<Public> {
 
     let ring_set: Vec<Public> = ring_public_keys.iter()
         .map(|key_bytes| {
-            Public::deserialize_compressed(&mut &key_bytes[..])
+            Public::deserialize_compressed_unchecked(&mut &key_bytes[..])
                 .unwrap_or_else(|_| fallback_public.clone())
         })
         .collect();

@@ -119,3 +119,14 @@ class TestRingVRF(unittest.TestCase):
             '826744cb1504e259cde1cc3591b3e8422a94e326efe2d07893ddd1f9ccfeb9e0c7de8722e20629382536c16d8b5be6e0872e00e53b290884737ba00f8be6f7f8ddc3bd32a2023fe27339fcec08bb5011bd1fef14ea98876bcf64cb88c003190c96c1b168e2dcc743f9eadda76c041db42d39f27a58418f88c0ea67656a224934e12b5dfc8f0f460a95c2d467fa41907b',
             commitment_bytes.hex()
         )
+
+    def test_ring_commitment_padding_point(self):
+
+        ring_publics = [b'\x07F\x84m\x17F\x9f\xb2\xf9^\xf3e\xef\xca\xb9\xf4\xe2/\xa1\xfe\xb51\x11\xc9\x957k\xe8\x01\x99\x81\xcc', b'\x15\x1e\\\x8f\xe2\xb9\xd8\xa6\x06\x96jy\xed\xd2\xf9\xe5\xdbG\xe89G\xce6\x8c\xcb\xa5;\xf6\xba \xa4\x0b', b'\x93&\xed\xb2\x1eUAq\x7f\xde$\xec\x08P\x00\xb2\x87\t\x84{\x8a\xab\x1a\xc5\x1f\x84\xe9K7\xca\x1bf', b'$p\xd4\xb7>\x8a^\xfa\x81y\xc9\xef\xffl\x7f\x03\x8e\xceJ\xba^\x97\xab\xfa\n\xdd:\x1aT-\xee4', b'\xffq\xc6\xc0?\xf8\x8a\xdb^\xd5,\x96\x81\xde\x16)\xa5Np/\xc1G)\xf6\xb5\r/\nv\xf1\x85\xb3', b'!\x05e\tD\xfc\xd1\x01b\x1f\xd5\xbb1$\xc9\xfd\x19\x1d\x11Kz\xd96\xc1\xd7\x9dsO\x9f!9.']
+
+        commitment_bytes = ring_commitment(self.ring_data, ring_publics)
+
+        self.assertEqual(
+            'a904d861ad534ad7920ce2cc4e8c9e3af0494b5bafecd583c6c436fe58977ebafbfc468ed31180ed377f6b57c0d34a508dbf8d0182ea4515c850b4b33a5574dcfe2850a89e0909d88653c9134e0112cf6e3fc12f553a41bc39f909890102818b92e630ae2b14e758ab0960e372172203f4c9a41777dadd529971d7ab9d23ab29fe0e9c85ec450505dde7f5ac038274cf',
+            commitment_bytes.hex()
+        )
