@@ -426,7 +426,7 @@ impl PyProof {
 
 impl From<Proof<BandersnatchSha512Ell2>> for PyProof {
     fn from(proof: Proof<BandersnatchSha512Ell2>) -> Self {
-        Python::with_gil(|py| PyProof::new(
+        Python::attach(|py| PyProof::new(
             py, serialize_to_vec(&proof.c), serialize_to_vec(&proof.s)
         ))
     }
