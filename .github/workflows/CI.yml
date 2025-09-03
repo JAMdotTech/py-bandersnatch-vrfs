@@ -9,7 +9,6 @@ on:
   push:
     branches:
       - main
-      - az-python314
     tags:
       - '*'
   pull_request:

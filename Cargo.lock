@@ -502,7 +502,7 @@ dependencies = [
 
 [[package]]
 name = "py_bandersnatch_vrfs"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "ark-vrf",
  "hex",
