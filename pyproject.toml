@@ -1,10 +1,10 @@
 [build-system]
-requires = ["maturin>=1.7,<1.8"]
+requires = ["maturin>=1.7.0,<1.10.0"]
 build-backend = "maturin"
 
 [project]
 name = "bandersnatch_vrfs"
-version = "0.5.0"
+version = "0.6.0"
 description = "Python Bandersnatch VRFs library utilizing the RUST ark-ec-vrfs cryptographic library"
 readme = "README.md"
 
