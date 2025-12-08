@@ -220,12 +220,21 @@ fn ietf_vrf_verify_inner(public_key: &[u8], vrf_input_data: &[u8], aux_data: &[u
 }
 
 #[pyfunction]
-fn ietf_vrf_verify(public_key: &[u8], vrf_input_data: &[u8], aux_data: &[u8], signature: &[u8], py: Python) -> PyResult<Py<PyBytes>> {
-    let ietf_vrf_output = ietf_vrf_verify_inner(
-        public_key, vrf_input_data, aux_data, signature
-    ).map_err(|err| PyValueError::new_err(format!("Verify failed: {}", err.to_string())))?;
-
-    Ok(PyBytes::new(py, &ietf_vrf_output).into())
+fn ietf_vrf_verify(
+    public_key: &[u8],
+    vrf_input_data: &[u8],
+    aux_data: &[u8],
+    signature: &[u8],
+    py: Python,
+) -> PyResult<Py<PyBytes>> {
+    let out = py
+        .detach(|| ietf_vrf_verify_inner(public_key, vrf_input_data, aux_data, signature))
+        .map_err(|e| match e {
+            VrfError::InvalidSignature => PyValueError::new_err("Verify failed: Invalid signature"),
+            VrfError::VerificationError => PyValueError::new_err("Verify failed: Verification error"),
+            VrfError::DecodingError => PyValueError::new_err("Verify failed: Decoding error"),
+        })?;
+    Ok(PyBytes::new(py, &out).into())
 }
 
 #[pyfunction]
