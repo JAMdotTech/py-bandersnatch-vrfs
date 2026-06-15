@@ -111,17 +111,14 @@ fn ring_context(ring_data: &[u8], ring_size: usize) -> RingProofParams {
 
 // Construct VRF Input Point from arbitrary data (section 1.2)
 fn vrf_input_point(vrf_input_data: &[u8]) -> Input {
-    let point =
-        <BandersnatchSha512Ell2 as ark_vrf::Suite>::data_to_point(vrf_input_data)
-            .unwrap();
-    Input::from(point)
+    Input::new(vrf_input_data).unwrap()
 }
 
 fn vrf_output_point(vrf_output_data: &[u8]) -> Output {
     let point =
         <BandersnatchSha512Ell2 as ark_vrf::Suite>::data_to_point(vrf_output_data)
             .unwrap();
-    Output::from(point)
+    Output::from_affine(point)
 }
 
 type RingCommitment = ark_vrf::ring::RingCommitment<BandersnatchSha512Ell2>;
@@ -130,7 +127,7 @@ pub type PublicKey = [u8; 32];
 pub type SecretKey = [u8; 32];
 
 fn vec_array_to_public(ring_public_keys: Vec<Vec<u8>>) -> Vec<Public> {
-    let fallback_public = Public::from(RingProofParams::padding_point());
+    let fallback_public = Public::from_affine(RingProofParams::padding_point());
 
     let ring_set: Vec<Public> = ring_public_keys.iter()
         .map(|key_bytes| {
