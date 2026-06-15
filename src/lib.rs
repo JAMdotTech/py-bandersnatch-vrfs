@@ -1,23 +1,26 @@
 use pyo3::prelude::*;
 
 use ark_vrf::reexports::{
+    ark_ff::{PrimeField, Zero},
     ark_serialize::{self, CanonicalDeserialize, CanonicalSerialize},
 };
-use ark_vrf::{suites::bandersnatch};
+use ark_vrf::{suites::bandersnatch, VrfIo};
 use bandersnatch::{
-    BandersnatchSha512Ell2, IetfProof, Input, Output, Public, RingProof,
-    RingProofParams, Secret,
+    BandersnatchSha512Ell2, Input, Output, Public, RingProof, RingSetup, ScalarField, Secret,
+    TinyProof,
 };
 
-use pyo3::types::PyBytes;
-use std::fmt;
-use std::error::Error;
-use ark_vrf::ietf::{Proof};
 use pyo3::exceptions::PyValueError;
+use pyo3::types::PyBytes;
+use sha2::Digest;
+use std::error::Error;
+use std::fmt;
+
+type Proof = TinyProof;
 
 #[pyclass]
 struct RingContext {
-    ring_ctx: RingProofParams,
+    ring_ctx: RingSetup,
     ring: Vec<Public>,
     commitment: RingCommitment,
 }
@@ -30,49 +33,76 @@ impl RingContext {
         let ring_size = ring.len();
         let pts: Vec<_> = ring.iter().map(|pk| pk.0).collect();
         let ring_ctx = ring_context(ring_data, ring_size);
-        let verifier_key = ring_ctx.verifier_key(&pts);
+        let verifier_key = ring_ctx.verifier_key(&pts).unwrap();
         let commitment = verifier_key.commitment();
-        Ok(Self { ring_ctx, ring, commitment })
+        Ok(Self {
+            ring_ctx,
+            ring,
+            commitment,
+        })
     }
 
-    fn ring_vrf_verify(&self, py: Python, vrf_input_data: &[u8], aux_data: &[u8], signature: &[u8]) -> PyResult<Py<PyBytes>> {
+    fn ring_vrf_verify(
+        &self,
+        py: Python,
+        vrf_input_data: &[u8],
+        aux_data: &[u8],
+        signature: &[u8],
+    ) -> PyResult<Py<PyBytes>> {
         use ark_vrf::ring::Verifier as _;
-        let out = py.detach(|| {
-            let sig = RingVrfSignature::deserialize_compressed(signature)
-                .map_err(|_| VrfError::InvalidSignature)?;
-            let input = vrf_input_point(vrf_input_data);
-            let output = sig.output;
+        let out = py
+            .detach(|| {
+                let sig = RingVrfSignature::deserialize_compressed(signature)
+                    .map_err(|_| VrfError::InvalidSignature)?;
+                let input = vrf_input_point(vrf_input_data);
+                let output = sig.output;
+                let io = VrfIo { input, output };
 
-            let vkey = self.ring_ctx.verifier_key_from_commitment(self.commitment.clone());
-            let verifier = self.ring_ctx.verifier(vkey);
+                let vkey = self
+                    .ring_ctx
+                    .verifier_key_from_commitment(self.commitment.clone());
+                let verifier = self.ring_ctx.ring_verifier(vkey);
 
-            if Public::verify(input, output, aux_data, &sig.proof, &verifier).is_err() {
-                return Err(VrfError::VerificationError);
-            }
-            let mut h = [0u8; 32];
-            h.copy_from_slice(&output.hash()[..32]);
-            Ok::<[u8;32], VrfError>(h)
-        }).map_err(|e: VrfError| PyValueError::new_err(e.to_string()))?;
+                if Public::verify(io, aux_data, &sig.proof, &verifier).is_err() {
+                    return Err(VrfError::VerificationError);
+                }
+                Ok::<[u8; 32], VrfError>(output.hash::<32>())
+            })
+            .map_err(|e: VrfError| PyValueError::new_err(e.to_string()))?;
         Ok(PyBytes::new(py, &out).into())
     }
 
-    fn ring_vrf_sign(&self, py: Python, prover_key_index: usize, secret_key: &[u8], vrf_input_data: &[u8], aux_data: &[u8]) -> PyResult<Py<PyBytes>> {
+    fn ring_vrf_sign(
+        &self,
+        py: Python,
+        prover_key_index: usize,
+        secret_key: &[u8],
+        vrf_input_data: &[u8],
+        aux_data: &[u8],
+    ) -> PyResult<Py<PyBytes>> {
         use ark_vrf::ring::Prover as _;
-        let sig = py.detach(|| {
-            let secret = Secret::deserialize_compressed(&mut &secret_key[..]).map_err(|_| VrfError::DecodingError)?;
-            let input = vrf_input_point(vrf_input_data);
-            let output = secret.output(input);
+        let sig = py
+            .detach(|| {
+                let secret = Secret::deserialize_compressed(&mut &secret_key[..])
+                    .map_err(|_| VrfError::DecodingError)?;
+                let input = vrf_input_point(vrf_input_data);
+                let io = secret.vrf_io(input);
+                let output = io.output;
 
-            let pts: Vec<_> = self.ring.iter().map(|pk| pk.0).collect();
-            let pkey = self.ring_ctx.prover_key(&pts);
-            let prover = self.ring_ctx.prover(pkey, prover_key_index);
+                let pts: Vec<_> = self.ring.iter().map(|pk| pk.0).collect();
+                let pkey = self
+                    .ring_ctx
+                    .prover_key(&pts)
+                    .map_err(|_| VrfError::InvalidSignature)?;
+                let prover = self.ring_ctx.ring_prover(pkey, prover_key_index);
 
-            let proof = secret.prove(input, output, aux_data, &prover);
-            let signature = RingVrfSignature { output, proof };
-            let mut buf = Vec::with_capacity(512);
-            signature.serialize_compressed(&mut buf).unwrap();
-            Ok::<Vec<u8>, VrfError>(buf)
-        }).map_err(|e: VrfError| PyValueError::new_err(e.to_string()))?;
+                let proof = secret.prove(io, aux_data, &prover);
+                let signature = RingVrfSignature { output, proof };
+                let mut buf = Vec::with_capacity(512);
+                signature.serialize_compressed(&mut buf).unwrap();
+                Ok::<Vec<u8>, VrfError>(buf)
+            })
+            .map_err(|e: VrfError| PyValueError::new_err(e.to_string()))?;
         Ok(PyBytes::new(py, &sig).into())
     }
 
@@ -84,13 +114,12 @@ impl RingContext {
     }
 }
 
-
 // This is the IETF `Prove` procedure output as described in section 2.2
 // of the Bandersnatch VRFs specification
 #[derive(CanonicalSerialize, CanonicalDeserialize)]
 struct IetfVrfSignature {
     output: Output,
-    proof: IetfProof,
+    proof: TinyProof,
 }
 
 // This is the IETF `Prove` procedure output as described in section 4.2
@@ -103,10 +132,10 @@ struct RingVrfSignature {
 }
 
 // ring context data
-fn ring_context(ring_data: &[u8], ring_size: usize) -> RingProofParams {
+fn ring_context(ring_data: &[u8], ring_size: usize) -> RingSetup {
     use bandersnatch::PcsParams;
     let pcs_params = PcsParams::deserialize_uncompressed_unchecked(&mut &ring_data[..]).unwrap();
-    RingProofParams::from_pcs_params(ring_size, pcs_params).unwrap()
+    RingSetup::from_pcs_params(ring_size, pcs_params).unwrap()
 }
 
 // Construct VRF Input Point from arbitrary data (section 1.2)
@@ -115,10 +144,8 @@ fn vrf_input_point(vrf_input_data: &[u8]) -> Input {
 }
 
 fn vrf_output_point(vrf_output_data: &[u8]) -> Output {
-    let point =
-        <BandersnatchSha512Ell2 as ark_vrf::Suite>::data_to_point(vrf_output_data)
-            .unwrap();
-    Output::from_affine(point)
+    let point = <BandersnatchSha512Ell2 as ark_vrf::Suite>::data_to_point(vrf_output_data).unwrap();
+    Output::from_affine(point).unwrap()
 }
 
 type RingCommitment = ark_vrf::ring::RingCommitment<BandersnatchSha512Ell2>;
@@ -127,9 +154,10 @@ pub type PublicKey = [u8; 32];
 pub type SecretKey = [u8; 32];
 
 fn vec_array_to_public(ring_public_keys: Vec<Vec<u8>>) -> Vec<Public> {
-    let fallback_public = Public::from_affine(RingProofParams::padding_point());
+    let fallback_public = Public::from_affine_unchecked(RingSetup::padding_point());
 
-    let ring_set: Vec<Public> = ring_public_keys.iter()
+    let ring_set: Vec<Public> = ring_public_keys
+        .iter()
         .map(|key_bytes| {
             Public::deserialize_compressed_unchecked(&mut &key_bytes[..])
                 .unwrap_or_else(|_| fallback_public.clone())
@@ -139,33 +167,31 @@ fn vec_array_to_public(ring_public_keys: Vec<Vec<u8>>) -> Vec<Public> {
 }
 
 fn vrf_output_inner(secret: &Secret, vrf_input_data: &[u8]) -> Vec<u8> {
-
     let input = vrf_input_point(vrf_input_data);
     let output = secret.output(input);
 
-    let vrf_output_hash: [u8; 32] = output.hash()[..32].try_into().unwrap();
+    let vrf_output_hash: [u8; 32] = output.hash::<32>();
     vrf_output_hash.to_vec()
 }
 
 #[pyfunction]
 fn vrf_output(secret_key: &[u8], vrf_input_data: &[u8], py: Python) -> PyResult<Py<PyBytes>> {
+    let secret = Secret::deserialize_compressed(&mut &secret_key[..])
+        .map_err(|err| PyValueError::new_err(format!("Invalid secret_key: {}", err.to_string())))?;
 
-    let secret = Secret::deserialize_compressed(
-        &mut &secret_key[..]
-    ).map_err(|err| PyValueError::new_err(format!("Invalid secret_key: {}", err.to_string())))?;
-
-   let vrf_output = crate::vrf_output_inner(&secret, vrf_input_data);
-   Ok(PyBytes::new(py, &vrf_output).into())
+    let vrf_output = crate::vrf_output_inner(&secret, vrf_input_data);
+    Ok(PyBytes::new(py, &vrf_output).into())
 }
 
 fn ietf_vrf_sign_inner(secret_key: &[u8], vrf_input_data: &[u8], aux_data: &[u8]) -> Vec<u8> {
-    use ark_vrf::ietf::Prover as _;
+    use ark_vrf::tiny::Prover as _;
 
     let secret = Secret::deserialize_compressed(&mut &secret_key[..]).unwrap();
     let input = vrf_input_point(vrf_input_data);
-    let output = secret.output(input);
+    let io = secret.vrf_io(input);
+    let output = io.output;
 
-    let proof = secret.prove(input, output, aux_data);
+    let proof = secret.prove(io, aux_data);
 
     // Output and IETF Proof bundled together (as per section 2.2)
     let signature = IetfVrfSignature { output, proof };
@@ -175,9 +201,14 @@ fn ietf_vrf_sign_inner(secret_key: &[u8], vrf_input_data: &[u8], aux_data: &[u8]
 }
 
 #[pyfunction]
-fn ietf_vrf_sign(secret_key: &[u8], vrf_input_data: &[u8], aux_data: &[u8], py: Python) -> PyResult<Py<PyBytes>> {
-   let signature = ietf_vrf_sign_inner(secret_key, vrf_input_data, aux_data);
-   Ok(PyBytes::new(py, &signature).into())
+fn ietf_vrf_sign(
+    secret_key: &[u8],
+    vrf_input_data: &[u8],
+    aux_data: &[u8],
+    py: Python,
+) -> PyResult<Py<PyBytes>> {
+    let signature = ietf_vrf_sign_inner(secret_key, vrf_input_data, aux_data);
+    Ok(PyBytes::new(py, &signature).into())
 }
 
 #[derive(Debug)]
@@ -199,20 +230,27 @@ impl fmt::Display for VrfError {
 
 impl Error for VrfError {}
 
-fn ietf_vrf_verify_inner(public_key: &[u8], vrf_input_data: &[u8], aux_data: &[u8], signature: &[u8]) -> Result<[u8; 32], VrfError> {
-    use ark_vrf::ietf::Verifier as _;
+fn ietf_vrf_verify_inner(
+    public_key: &[u8],
+    vrf_input_data: &[u8],
+    aux_data: &[u8],
+    signature: &[u8],
+) -> Result<[u8; 32], VrfError> {
+    use ark_vrf::tiny::Verifier as _;
 
     let public = Public::deserialize_compressed(public_key).unwrap();
-    let signature = IetfVrfSignature::deserialize_compressed(signature).map_err(|_| VrfError::VerificationError)?;
+    let signature = IetfVrfSignature::deserialize_compressed(signature)
+        .map_err(|_| VrfError::VerificationError)?;
 
     let input = vrf_input_point(vrf_input_data);
     let output = signature.output;
+    let io = VrfIo { input, output };
 
-    if public.verify(input, output, aux_data, &signature.proof).is_err() {
-        return Err(VrfError::VerificationError)
+    if public.verify(io, aux_data, &signature.proof).is_err() {
+        return Err(VrfError::VerificationError);
     }
 
-    let vrf_output_hash: [u8; 32] = output.hash()[..32].try_into().unwrap();
+    let vrf_output_hash: [u8; 32] = output.hash::<32>();
     Ok(vrf_output_hash)
 }
 
@@ -228,7 +266,9 @@ fn ietf_vrf_verify(
         .detach(|| ietf_vrf_verify_inner(public_key, vrf_input_data, aux_data, signature))
         .map_err(|e| match e {
             VrfError::InvalidSignature => PyValueError::new_err("Verify failed: Invalid signature"),
-            VrfError::VerificationError => PyValueError::new_err("Verify failed: Verification error"),
+            VrfError::VerificationError => {
+                PyValueError::new_err("Verify failed: Verification error")
+            }
             VrfError::DecodingError => PyValueError::new_err("Verify failed: Decoding error"),
         })?;
     Ok(PyBytes::new(py, &out).into())
@@ -236,17 +276,40 @@ fn ietf_vrf_verify(
 
 #[pyfunction]
 fn secret_from_seed(seed: &[u8], py: Python) -> PyResult<Py<PyBytes>> {
-    let secret = Secret::from_seed(&seed);
+    let secret = legacy_secret_from_seed(seed);
     let mut secret_key = Vec::new();
     secret.serialize_compressed(&mut secret_key).unwrap();
     Ok(PyBytes::new(py, &secret_key).into())
+}
+
+fn legacy_secret_from_seed(seed: &[u8]) -> Secret {
+    let mut cnt = 0_u8;
+    let scalar = loop {
+        let mut hasher = sha2::Sha512::new();
+        hasher.update(seed);
+        if cnt > 0 {
+            hasher.update([cnt]);
+        }
+        let bytes = hasher.finalize();
+        let scalar = ScalarField::from_le_bytes_mod_order(&bytes[..]);
+        if !scalar.is_zero() {
+            break scalar;
+        }
+        cnt = cnt
+            .checked_add(1)
+            .expect("unreachable: SHA-512 produced 256 consecutive zero scalars");
+    };
+    Secret::from_scalar(scalar)
 }
 
 #[pyfunction]
 fn public_from_secret(secret_key: &[u8], py: Python) -> PyResult<Py<PyBytes>> {
     let secret = Secret::deserialize_compressed(&mut &secret_key[..]).unwrap();
     let mut public_key = Vec::new();
-    secret.public().serialize_compressed(&mut public_key).unwrap();
+    secret
+        .public()
+        .serialize_compressed(&mut public_key)
+        .unwrap();
     Ok(PyBytes::new(py, &public_key).into())
 }
 
@@ -258,7 +321,6 @@ fn serialize_to_vec<S: CanonicalSerialize>(item: &S) -> Vec<u8> {
 
 #[pyclass]
 struct PyProof {
-
     #[pyo3(get)]
     pub c: Py<PyBytes>,
 
@@ -277,30 +339,39 @@ impl PyProof {
     }
 }
 
-impl From<Proof<BandersnatchSha512Ell2>> for PyProof {
-    fn from(proof: Proof<BandersnatchSha512Ell2>) -> Self {
-        Python::attach(|py| PyProof::new(
-            py, serialize_to_vec(&proof.c), serialize_to_vec(&proof.s)
-        ))
+impl From<Proof> for PyProof {
+    fn from(proof: Proof) -> Self {
+        Python::attach(|py| {
+            PyProof::new(py, serialize_to_vec(&proof.c), serialize_to_vec(&proof.s))
+        })
     }
 }
 
-fn generate_vrf_proof_inner(secret_key: &[u8], vrf_input_data: &[u8], vrf_output_data: &[u8], aux_data: &[u8]) -> Proof<BandersnatchSha512Ell2> {
-    use ark_vrf::ietf::{Prover};
+fn generate_vrf_proof_inner(
+    secret_key: &[u8],
+    vrf_input_data: &[u8],
+    vrf_output_data: &[u8],
+    aux_data: &[u8],
+) -> Proof {
+    use ark_vrf::tiny::Prover;
     let secret = Secret::deserialize_compressed(&mut &secret_key[..]).unwrap();
     let input = vrf_input_point(vrf_input_data);
     let output = vrf_output_point(vrf_output_data);
-    secret.prove(input, output, aux_data)
+    let io = VrfIo { input, output };
+    secret.prove(io, aux_data)
 }
 
 #[pyfunction]
-fn generate_vrf_proof(secret_key: &[u8], vrf_input_data: &[u8], vrf_output_data: &[u8], aux_data: &[u8]) -> PyResult<PyProof> {
+fn generate_vrf_proof(
+    secret_key: &[u8],
+    vrf_input_data: &[u8],
+    vrf_output_data: &[u8],
+    aux_data: &[u8],
+) -> PyResult<PyProof> {
     let proof = generate_vrf_proof_inner(secret_key, vrf_input_data, vrf_output_data, aux_data);
     let py_proof = proof.into();
     Ok(py_proof)
 }
-
-
 
 /// A Python module implemented in Rust.
 #[pymodule]

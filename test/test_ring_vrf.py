@@ -26,7 +26,7 @@ class TestRingVRF(unittest.TestCase):
         output = vrf_output(self.ring_secrets[prover_key_index], vrf_input_data)
 
         self.assertEqual(
-            '6b260bfda2e3ef118c529f30b60dfa4678fbeef3682b55ba002aa8633f1b0364',
+            'a5f1aedab7d74fe2ea12d56dbc3edb472f1e6521f7fbc5356b89256d9e3c7970',
             output.hex()
         )
 
@@ -50,7 +50,7 @@ class TestRingVRF(unittest.TestCase):
         ring_vrf_output = ring_context.ring_vrf_verify(vrf_input_data, aux_data, signature)
 
         self.assertEqual(
-            '6b260bfda2e3ef118c529f30b60dfa4678fbeef3682b55ba002aa8633f1b0364',
+            'a5f1aedab7d74fe2ea12d56dbc3edb472f1e6521f7fbc5356b89256d9e3c7970',
             ring_vrf_output.hex()
         )
 
@@ -70,7 +70,7 @@ class TestRingVRF(unittest.TestCase):
         )
 
         self.assertEqual(
-            '6b260bfda2e3ef118c529f30b60dfa4678fbeef3682b55ba002aa8633f1b0364',
+            'a5f1aedab7d74fe2ea12d56dbc3edb472f1e6521f7fbc5356b89256d9e3c7970',
             vrf_output_hash.hex()
         )
 
@@ -122,7 +122,7 @@ class TestRingVRF(unittest.TestCase):
         ring_context = RingContext(self.ring_data, self.ring_publics)
 
         self.assertEqual(
-            '826744cb1504e259cde1cc3591b3e8422a94e326efe2d07893ddd1f9ccfeb9e0c7de8722e20629382536c16d8b5be6e0872e00e53b290884737ba00f8be6f7f8ddc3bd32a2023fe27339fcec08bb5011bd1fef14ea98876bcf64cb88c003190c96c1b168e2dcc743f9eadda76c041db42d39f27a58418f88c0ea67656a224934e12b5dfc8f0f460a95c2d467fa41907b',
+            '8420c42bcca815f46766e5eabdec5a5ed4af9e146ea833354c760155a87fef18591ff58c3ac3d67884cd9da6af333ab797019ae9f095689622427ed90317cf9973e4806bb306a95bcfb7c6c93485b1b7274201dd6974c130c3447a0591b11b4696c1b168e2dcc743f9eadda76c041db42d39f27a58418f88c0ea67656a224934e12b5dfc8f0f460a95c2d467fa41907b',
             ring_context.commitment.hex()
         )
 
@@ -133,6 +133,6 @@ class TestRingVRF(unittest.TestCase):
         ring_context = RingContext(self.ring_data, ring_publics)
 
         self.assertEqual(
-            'a904d861ad534ad7920ce2cc4e8c9e3af0494b5bafecd583c6c436fe58977ebafbfc468ed31180ed377f6b57c0d34a508dbf8d0182ea4515c850b4b33a5574dcfe2850a89e0909d88653c9134e0112cf6e3fc12f553a41bc39f909890102818b92e630ae2b14e758ab0960e372172203f4c9a41777dadd529971d7ab9d23ab29fe0e9c85ec450505dde7f5ac038274cf',
+            '99499ca29ec4aa9437f04007bf1f94a23694f969b6612e0885ac26f0e82dd2d57d5383c3beca29346ab74dcdb8fd99bea1afe06765f9eb605541c07fbdcd7f8b940ce293749f5596710f7e9e44e2feccadea0ca09f903054d6ccbd43d084416b92e630ae2b14e758ab0960e372172203f4c9a41777dadd529971d7ab9d23ab29fe0e9c85ec450505dde7f5ac038274cf',
             ring_context.commitment.hex()
         )
