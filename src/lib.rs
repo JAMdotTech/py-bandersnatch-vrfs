@@ -15,6 +15,7 @@ use std::error::Error;
 use ark_vrf::ietf::{Proof};
 use pyo3::exceptions::PyValueError;
 
+/// Ring VRF context with an optional capacity independent of the member count.
 #[pyclass]
 struct RingContext {
     ring_ctx: RingProofParams,
@@ -25,11 +26,23 @@ struct RingContext {
 #[pymethods]
 impl RingContext {
     #[new]
-    fn new(ring_data: &[u8], ring_public_keys: Vec<Vec<u8>>) -> PyResult<Self> {
+    #[pyo3(signature = (ring_data, ring_public_keys, *, ring_capacity = None))]
+    fn new(
+        ring_data: &[u8],
+        ring_public_keys: Vec<Vec<u8>>,
+        ring_capacity: Option<usize>,
+    ) -> PyResult<Self> {
+        let ring_capacity = ring_capacity.unwrap_or(ring_public_keys.len());
+        if ring_capacity < ring_public_keys.len() {
+            return Err(PyValueError::new_err(
+                "ring_capacity must be at least the number of public keys",
+            ));
+        }
         let ring = vec_array_to_public(ring_public_keys);
-        let ring_size = ring.len();
         let pts: Vec<_> = ring.iter().map(|pk| pk.0).collect();
-        let ring_ctx = ring_context(ring_data, ring_size);
+        // The native backend fills unused positions with its own padding point.
+        // Keep only supplied members in `ring` so padding is never a signing index.
+        let ring_ctx = ring_context(ring_data, ring_capacity)?;
         let verifier_key = ring_ctx.verifier_key(&pts);
         let commitment = verifier_key.commitment();
         Ok(Self { ring_ctx, ring, commitment })
@@ -58,6 +71,11 @@ impl RingContext {
 
     fn ring_vrf_sign(&self, py: Python, prover_key_index: usize, secret_key: &[u8], vrf_input_data: &[u8], aux_data: &[u8]) -> PyResult<Py<PyBytes>> {
         use ark_vrf::ring::Prover as _;
+        if prover_key_index >= self.ring.len() {
+            return Err(PyValueError::new_err(
+                "prover_key_index must refer to a supplied public key",
+            ));
+        }
         let sig = py.detach(|| {
             let secret = Secret::deserialize_compressed(&mut &secret_key[..]).map_err(|_| VrfError::DecodingError)?;
             let input = vrf_input_point(vrf_input_data);
@@ -103,10 +121,28 @@ struct RingVrfSignature {
 }
 
 // ring context data
-fn ring_context(ring_data: &[u8], ring_size: usize) -> RingProofParams {
+fn ring_context(ring_data: &[u8], ring_capacity: usize) -> PyResult<RingProofParams> {
     use bandersnatch::PcsParams;
-    let pcs_params = PcsParams::deserialize_uncompressed_unchecked(&mut &ring_data[..]).unwrap();
-    RingProofParams::from_pcs_params(ring_size, pcs_params).unwrap()
+    use ark_vrf::ring::{max_ring_size_from_pcs_domain_size, pcs_domain_size};
+
+    let pcs_params = PcsParams::deserialize_uncompressed_unchecked(&mut &ring_data[..])
+        .map_err(|_| PyValueError::new_err("Invalid ring_data: cannot decode PCS parameters"))?;
+    // Bound capacity before the upstream domain-size arithmetic, which is unchecked.
+    // Check the minimum SRS size before using its inverse domain-size conversion.
+    if pcs_params.powers_in_g1.len() < pcs_domain_size::<BandersnatchSha512Ell2>(0)
+        || pcs_params.powers_in_g2.len() < 2
+        || ring_capacity
+            > max_ring_size_from_pcs_domain_size::<BandersnatchSha512Ell2>(
+                pcs_params.powers_in_g1.len(),
+            )
+    {
+        return Err(PyValueError::new_err(
+            "ring_data does not support the requested ring_capacity",
+        ));
+    }
+    RingProofParams::from_pcs_params(ring_capacity, pcs_params).map_err(|_| {
+        PyValueError::new_err("ring_data does not support the requested ring_capacity")
+    })
 }
 
 // Construct VRF Input Point from arbitrary data (section 1.2)

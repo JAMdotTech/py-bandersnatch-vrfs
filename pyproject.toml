@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "bandersnatch_vrfs"
-version = "0.6.2"
+version = "0.6.3"
 description = "Python Bandersnatch VRFs library utilizing the RUST ark-ec-vrfs cryptographic library"
 readme = "README.md"
 
