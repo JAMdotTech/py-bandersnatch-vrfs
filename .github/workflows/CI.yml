@@ -96,9 +96,12 @@ jobs:
           path: dist
 
   windows:
+    name: Windows (${{ matrix.platform.target }}, Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.platform.runner }}
     strategy:
+      fail-fast: false
       matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
         platform:
           - runner: windows-latest
             target: x64
@@ -108,18 +111,22 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.x
+          python-version: ${{ matrix.python-version }}
           architecture: ${{ matrix.platform.target }}
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter
+          args: --release --locked --out dist --interpreter python
           sccache: 'true'
+      - name: Install built wheel
+        run: python -m pip install --no-index --find-links dist bandersnatch_vrfs
+      - name: Run tests
+        run: python -m unittest discover -s test -v
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-windows-${{ matrix.platform.target }}
+          name: wheels-windows-${{ matrix.platform.target }}-py${{ matrix.python-version }}
           path: dist
 
   macos:
