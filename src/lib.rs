@@ -12,6 +12,7 @@ use bandersnatch::{
 use pyo3::types::PyBytes;
 use std::fmt;
 use std::error::Error;
+use std::sync::OnceLock;
 use ark_vrf::ietf::{Proof};
 use pyo3::exceptions::PyValueError;
 
@@ -21,6 +22,9 @@ struct RingContext {
     ring_ctx: RingProofParams,
     ring: Vec<Public>,
     commitment: RingCommitment,
+    // Native preparation is immutable and shared by all signatures for this ring.
+    // Verification-only contexts never allocate this additional proving state.
+    prover_key: OnceLock<bandersnatch::RingProverKey>,
 }
 
 #[pymethods]
@@ -28,24 +32,12 @@ impl RingContext {
     #[new]
     #[pyo3(signature = (ring_data, ring_public_keys, *, ring_capacity = None))]
     fn new(
+        py: Python<'_>,
         ring_data: &[u8],
         ring_public_keys: Vec<Vec<u8>>,
         ring_capacity: Option<usize>,
     ) -> PyResult<Self> {
-        let ring_capacity = ring_capacity.unwrap_or(ring_public_keys.len());
-        if ring_capacity < ring_public_keys.len() {
-            return Err(PyValueError::new_err(
-                "ring_capacity must be at least the number of public keys",
-            ));
-        }
-        let ring = vec_array_to_public(ring_public_keys);
-        let pts: Vec<_> = ring.iter().map(|pk| pk.0).collect();
-        // The native backend fills unused positions with its own padding point.
-        // Keep only supplied members in `ring` so padding is never a signing index.
-        let ring_ctx = ring_context(ring_data, ring_capacity)?;
-        let verifier_key = ring_ctx.verifier_key(&pts);
-        let commitment = verifier_key.commitment();
-        Ok(Self { ring_ctx, ring, commitment })
+        py.detach(move || Self::build(ring_data, ring_public_keys, ring_capacity))
     }
 
     fn ring_vrf_verify(&self, py: Python, vrf_input_data: &[u8], aux_data: &[u8], signature: &[u8]) -> PyResult<Py<PyBytes>> {
@@ -81,9 +73,13 @@ impl RingContext {
             let input = vrf_input_point(vrf_input_data);
             let output = secret.output(input);
 
-            let pts: Vec<_> = self.ring.iter().map(|pk| pk.0).collect();
-            let pkey = self.ring_ctx.prover_key(&pts);
-            let prover = self.ring_ctx.prover(pkey, prover_key_index);
+            // Initialize only while detached: another signer may be preparing the
+            // same ring, and waiting for it must not block Python's interpreter.
+            let pkey = self.prover_key.get_or_init(|| {
+                let pts: Vec<_> = self.ring.iter().map(|pk| pk.0).collect();
+                self.ring_ctx.prover_key(&pts)
+            });
+            let prover = self.ring_ctx.prover(pkey.clone(), prover_key_index);
 
             let proof = secret.prove(input, output, aux_data, &prover);
             let signature = RingVrfSignature { output, proof };
@@ -99,6 +95,29 @@ impl RingContext {
         let mut bytes = Vec::with_capacity(128);
         self.commitment.serialize_compressed(&mut bytes).unwrap();
         Ok(PyBytes::new(py, &bytes).into())
+    }
+}
+
+impl RingContext {
+    fn build(
+        ring_data: &[u8],
+        ring_public_keys: Vec<Vec<u8>>,
+        ring_capacity: Option<usize>,
+    ) -> PyResult<Self> {
+        let ring_capacity = ring_capacity.unwrap_or(ring_public_keys.len());
+        if ring_capacity < ring_public_keys.len() {
+            return Err(PyValueError::new_err(
+                "ring_capacity must be at least the number of public keys",
+            ));
+        }
+        let ring = vec_array_to_public(ring_public_keys);
+        let pts: Vec<_> = ring.iter().map(|pk| pk.0).collect();
+        // The native backend fills unused positions with its own padding point.
+        // Keep only supplied members in `ring` so padding is never a signing index.
+        let ring_ctx = ring_context(ring_data, ring_capacity)?;
+        let verifier_key = ring_ctx.verifier_key(&pts);
+        let commitment = verifier_key.commitment();
+        Ok(Self { ring_ctx, ring, commitment, prover_key: OnceLock::new() })
     }
 }
 
@@ -339,7 +358,9 @@ fn generate_vrf_proof(secret_key: &[u8], vrf_input_data: &[u8], vrf_output_data:
 
 
 /// A Python module implemented in Rust.
-#[pymodule]
+// Preserve the module's existing GIL requirement; free-threaded support needs
+// its own audit and CI rather than an implicit safety declaration.
+#[pymodule(gil_used = true)]
 fn bandersnatch_vrfs(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(ietf_vrf_sign, m)?)?;
     m.add_function(wrap_pyfunction!(vrf_output, m)?)?;
