@@ -36,6 +36,27 @@ rules. For example, a JAM client can pass its profile's maximum validator count
 while supplying only the current validator keys. The binding does not select a
 JAM profile or treat padding positions as validators.
 
+## Reusing ring contexts
+
+Construct a context once for an ordered ring and capacity, and reuse it for
+subsequent signatures and verification. Native construction releases Python's
+GIL. The first signature prepares and caches a native proving key; subsequent
+signatures reuse that preparation while creating independent provers and
+transcripts for each signer index and message. Cache initialization also runs
+without the GIL, so concurrent first signers can wait safely.
+
+The cache belongs to the context and contains public proving material, not
+secret keys or proofs. Verification-only contexts do not allocate the extra
+cached proving key. Changing the keys, their order, capacity, or SRS requires a
+new context. The cached key lives until its context is released.
+
+See [measured before/after results](benchmarks/results.md) and the
+[dependency compatibility assessment](docs/compatibility.md). PyO3 is pinned
+to 0.30.1; the JAM-compatible `ark-vrf` protocol backend remains pinned to
+0.2.2. Building from source requires Rust 1.85 or newer. PyO3 0.30.1 supports
+CPython 3.9 or newer and PyPy with Python 3.11 or newer; older PyPy runtimes
+cannot use this dependency version.
+
 ## Installation
 
 ### Compile for local development

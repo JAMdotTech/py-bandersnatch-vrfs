@@ -1,0 +1,410 @@
+{
+  "elapsed_seconds": 24.127729792147875,
+  "metadata": {
+    "auxiliary_data_hex": "70792d62616e646572736e617463682d767266732062656e63686d61726b20617578696c696172792064617461207631",
+    "command": "/private/tmp/py-bandersnatch-vrfs-prepared-rings/.venv/bin/python benchmarks/benchmark_ring.py --label candidate-prepared-pyo3-0.30.1 --source-revision 'working-tree based on bec3f19' --wheel /private/tmp/py-bandersnatch-vrfs-prepared-rings/dist/bandersnatch_vrfs-0.6.3-cp312-cp312-macosx_11_0_arm64.whl --output benchmarks/candidate.json --notes 'Candidate with lazy proving-key cache, detached native constructor, PyO3 0.30.1, explicit gil_used=true and unchanged ark-vrf 0.2.2; release wheel; CPU otherwise idle; RAYON_NUM_THREADS=1 fixes the shared native Rayon worker count.'",
+    "constructor_jobs_per_sample": 4,
+    "cpu_count": 10,
+    "cwd": "/private/tmp/py-bandersnatch-vrfs-prepared-rings",
+    "input_hex": "70792d62616e646572736e617463682d767266732062656e63686d61726b20696e707574207631",
+    "label": "candidate-prepared-pyo3-0.30.1",
+    "mac_cpu_brand": null,
+    "machine": "arm64",
+    "module_path": "/private/tmp/py-bandersnatch-vrfs-prepared-rings/.venv/lib/python3.12/site-packages/bandersnatch_vrfs/__init__.py",
+    "native_module_path": "/private/tmp/py-bandersnatch-vrfs-prepared-rings/.venv/lib/python3.12/site-packages/bandersnatch_vrfs/bandersnatch_vrfs.cpython-312-darwin.so",
+    "native_module_sha256": "edcad5d23235d0a974af298ad12d83115426c5c8a1bcac118c0a9353d592ed69",
+    "notes": "Candidate with lazy proving-key cache, detached native constructor, PyO3 0.30.1, explicit gil_used=true and unchanged ark-vrf 0.2.2; release wheel; CPU otherwise idle; RAYON_NUM_THREADS=1 fixes the shared native Rayon worker count.",
+    "package_version": "0.6.3",
+    "platform": "macOS-26.6-arm64-arm-64bit",
+    "processor": "arm",
+    "python_executable": "/private/tmp/py-bandersnatch-vrfs-prepared-rings/.venv/bin/python",
+    "python_implementation": "CPython",
+    "python_version": "3.12.11 (main, Jun  3 2025, 15:41:47) [Clang 17.0.0 (clang-1700.0.13.3)]",
+    "rayon_num_threads": "1",
+    "repeats": 3,
+    "seed_description": "secret_from_seed(index.to_bytes(8, 'little')), index starts at zero",
+    "sign_iterations_per_sample": 3,
+    "source_revision": "working-tree based on bec3f19",
+    "srs_sha256": "1d7d27e4f5f3c6190989bea58803180d3e19f725a57069392a405ac78b233c7d",
+    "started_at_utc": "2026-10-15T11:21:46.720724+00:00",
+    "wheel_path": "/private/tmp/py-bandersnatch-vrfs-prepared-rings/dist/bandersnatch_vrfs-0.6.3-cp312-cp312-macosx_11_0_arm64.whl",
+    "wheel_sha256": "919e2b36955b0911018b40cb1d0dbf594c609052fe5b4873bd75619926e37816",
+    "working_tree_revision": "bec3f19ab21ece765aa42e3245e8d783a72d0473",
+    "working_tree_status": "M Cargo.lock\n M Cargo.toml\n M README.md\n M src/lib.rs\n?? benchmarks/\n?? docs/\n?? test/legacy_compatibility.json\n?? test/test_legacy_compatibility.py\n?? test/test_ring_concurrency.py"
+  },
+  "profiles": {
+    "full": {
+      "capacity": 1023,
+      "commitment_hex": "826744cb1504e259cde1cc3591b3e8422a94e326efe2d07893ddd1f9ccfeb9e0c7de8722e20629382536c16d8b5be6e0872e00e53b290884737ba00f8be6f7f8ddc3bd32a2023fe27339fcec08bb5011bd1fef14ea98876bcf64cb88c003190c96c1b168e2dcc743f9eadda76c041db42d39f27a58418f88c0ea67656a224934e12b5dfc8f0f460a95c2d467fa41907b",
+      "constructor_fresh_process": {
+        "median_operations_per_second": 7.4486600724486305,
+        "median_seconds": 0.13425233401358128,
+        "median_seconds_per_operation": 0.13425233401358128,
+        "operations_per_sample": 1,
+        "samples_seconds": [
+          0.13501504203304648,
+          0.1341161250602454,
+          0.13425233401358128
+        ]
+      },
+      "constructor_gil_progress": {
+        "idle_counter_ticks_per_second": 17787259.828160554,
+        "idle_seconds": 0.15558062493801117,
+        "median_fraction_of_idle_counter_rate": 0.9971803085953896,
+        "method": "Python-only background counter during native constructor",
+        "samples": [
+          {
+            "constructor_seconds": 0.13594929198734462,
+            "fraction_of_idle_counter_rate": 0.9898810146587134,
+            "python_counter_ticks": 2393696,
+            "python_counter_ticks_per_second": 17607270.80669774
+          },
+          {
+            "constructor_seconds": 0.13412725017406046,
+            "fraction_of_idle_counter_rate": 0.9989448842965893,
+            "python_counter_ticks": 2383239,
+            "python_counter_ticks_per_second": 17768492.210995216
+          },
+          {
+            "constructor_seconds": 0.1344568331260234,
+            "fraction_of_idle_counter_rate": 0.9971803085953896,
+            "python_counter_ticks": 2384875,
+            "python_counter_ticks_per_second": 17737105.24451152
+          }
+        ],
+        "switch_interval_seconds": 0.001
+      },
+      "constructor_plus_first_signature": {
+        "median_operations_per_second": 1.615284034858274,
+        "median_seconds": 0.6190861659124494,
+        "median_seconds_per_operation": 0.6190861659124494,
+        "operations_per_sample": 1,
+        "samples_seconds": [
+          0.6263315409887582,
+          0.618559873662889,
+          0.6190861659124494
+        ]
+      },
+      "constructor_threads": {
+        "1": {
+          "median_operations_per_second": 7.463679865645371,
+          "median_seconds": 0.5359286668244749,
+          "median_seconds_per_operation": 0.13398216670611873,
+          "operations_per_sample": 4,
+          "samples_seconds": [
+            0.5359286668244749,
+            0.5358135418500751,
+            0.6257243750151247
+          ]
+        },
+        "4": {
+          "median_operations_per_second": 8.61035120276664,
+          "median_seconds": 0.4645571250002831,
+          "median_seconds_per_operation": 0.11613928125007078,
+          "operations_per_sample": 4,
+          "samples_seconds": [
+            0.4645571250002831,
+            0.46170029207132757,
+            0.4666476671118289
+          ]
+        },
+        "four_worker_speedup": 1.1536335102473099
+      },
+      "constructor_warm_process": {
+        "median_operations_per_second": 7.473001481692594,
+        "median_seconds": 0.13381504104472697,
+        "median_seconds_per_operation": 0.13381504104472697,
+        "operations_per_sample": 1,
+        "samples_seconds": [
+          0.13387466594576836,
+          0.13352995784953237,
+          0.13381504104472697
+        ]
+      },
+      "first_signature_fresh_context": {
+        "median_operations_per_second": 2.0607036948109885,
+        "median_seconds": 0.4852711248677224,
+        "median_seconds_per_operation": 0.4852711248677224,
+        "operations_per_sample": 1,
+        "samples_seconds": [
+          0.49245687504298985,
+          0.48502991581335664,
+          0.4852711248677224
+        ]
+      },
+      "members": 1023,
+      "repeated_signature_same_context_and_index": {
+        "median_operations_per_second": 2.6961177582893443,
+        "median_seconds": 1.1127110419329256,
+        "median_seconds_per_operation": 0.3709036806443085,
+        "operations_per_sample": 3,
+        "samples_seconds": [
+          1.1273376250173897,
+          1.09878895804286,
+          1.1127110419329256
+        ]
+      },
+      "signer_index": 1022,
+      "verification": {
+        "median_operations_per_second": 249.58836759422235,
+        "median_seconds": 0.012019790941849351,
+        "median_seconds_per_operation": 0.00400659698061645,
+        "operations_per_sample": 3,
+        "samples_seconds": [
+          0.011969458078965545,
+          0.012019790941849351,
+          0.012771958950906992
+        ]
+      }
+    },
+    "resized_full": {
+      "capacity": 1023,
+      "commitment_hex": "a24338c914e11c2c61032356316e345d89af5a6419eae6e87fab01286e2d37aa0d2939975e9aa32e6ee2f7128a90a245891e7d53f9821810c0f816f089c33f4d817c19ee17753a7e8080a2fd0b34852682874cc8015289846b1550704becc34296c1b168e2dcc743f9eadda76c041db42d39f27a58418f88c0ea67656a224934e12b5dfc8f0f460a95c2d467fa41907b",
+      "constructor_fresh_process": {
+        "median_operations_per_second": 8.757382202662981,
+        "median_seconds": 0.11418937495909631,
+        "median_seconds_per_operation": 0.11418937495909631,
+        "operations_per_sample": 1,
+        "samples_seconds": [
+          0.11418937495909631,
+          0.11391945881769061,
+          0.11426195804961026
+        ]
+      },
+      "constructor_gil_progress": {
+        "idle_counter_ticks_per_second": 17839988.435649596,
+        "idle_seconds": 0.15385766699910164,
+        "median_fraction_of_idle_counter_rate": 0.9917463448002777,
+        "method": "Python-only background counter during native constructor",
+        "samples": [
+          {
+            "constructor_seconds": 0.11622212501242757,
+            "fraction_of_idle_counter_rate": 0.9912697239986841,
+            "python_counter_ticks": 2055300,
+            "python_counter_ticks_per_second": 17684240.41274609
+          },
+          {
+            "constructor_seconds": 0.1171211248729378,
+            "fraction_of_idle_counter_rate": 0.9917463448002777,
+            "python_counter_ticks": 2072194,
+            "python_counter_ticks_per_second": 17692743.32233471
+          },
+          {
+            "constructor_seconds": 0.1194914998486638,
+            "fraction_of_idle_counter_rate": 1.0053956368117627,
+            "python_counter_ticks": 2143229,
+            "python_counter_ticks_per_second": 17936246.53397441
+          }
+        ],
+        "switch_interval_seconds": 0.001
+      },
+      "constructor_plus_first_signature": {
+        "median_operations_per_second": 1.6630580636529335,
+        "median_seconds": 0.6013019159436226,
+        "median_seconds_per_operation": 0.6013019159436226,
+        "operations_per_sample": 1,
+        "samples_seconds": [
+          0.6035662081558257,
+          0.6013019159436226,
+          0.5986489162314683
+        ]
+      },
+      "constructor_threads": {
+        "1": {
+          "median_operations_per_second": 8.713586059441587,
+          "median_seconds": 0.4590532500296831,
+          "median_seconds_per_operation": 0.11476331250742078,
+          "operations_per_sample": 4,
+          "samples_seconds": [
+            0.47484870813786983,
+            0.4590532500296831,
+            0.451779207913205
+          ]
+        },
+        "4": {
+          "median_operations_per_second": 9.013310981047285,
+          "median_seconds": 0.44378808280453086,
+          "median_seconds_per_operation": 0.11094702070113271,
+          "operations_per_sample": 4,
+          "samples_seconds": [
+            0.4414005000144243,
+            0.44378808280453086,
+            0.4452249170280993
+          ]
+        },
+        "four_worker_speedup": 1.034397424844497
+      },
+      "constructor_warm_process": {
+        "median_operations_per_second": 8.765474294302924,
+        "median_seconds": 0.11408395785838366,
+        "median_seconds_per_operation": 0.11408395785838366,
+        "operations_per_sample": 1,
+        "samples_seconds": [
+          0.11467287503182888,
+          0.11408395785838366,
+          0.11316083301790059
+        ]
+      },
+      "first_signature_fresh_context": {
+        "median_operations_per_second": 2.0524695024173343,
+        "median_seconds": 0.48721795808523893,
+        "median_seconds_per_operation": 0.48721795808523893,
+        "operations_per_sample": 1,
+        "samples_seconds": [
+          0.48889333312399685,
+          0.48721795808523893,
+          0.48548808321356773
+        ]
+      },
+      "members": 6,
+      "repeated_signature_same_context_and_index": {
+        "median_operations_per_second": 2.666075094342858,
+        "median_seconds": 1.1252496249508113,
+        "median_seconds_per_operation": 0.3750832083169371,
+        "operations_per_sample": 3,
+        "samples_seconds": [
+          1.1293997501488775,
+          1.1208553749602288,
+          1.1252496249508113
+        ]
+      },
+      "signer_index": 5,
+      "verification": {
+        "median_operations_per_second": 238.67772400968738,
+        "median_seconds": 0.01256925007328391,
+        "median_seconds_per_operation": 0.00418975002442797,
+        "operations_per_sample": 3,
+        "samples_seconds": [
+          0.012709874892607331,
+          0.012393999844789505,
+          0.01256925007328391
+        ]
+      }
+    },
+    "tiny": {
+      "capacity": 6,
+      "commitment_hex": "b86e74952106eae462aa1568f2514beec839cc1cfb2c1a4821d2f08cec50f430df0b4b8566c30211480c83d5da81b4998d11f36331adb1baca67dd8f576665fce4f8e768c6621bd5a23434c3fc071fc9ac91094c2e3d964bfd50804962679a9892e630ae2b14e758ab0960e372172203f4c9a41777dadd529971d7ab9d23ab29fe0e9c85ec450505dde7f5ac038274cf",
+      "constructor_fresh_process": {
+        "median_operations_per_second": 26.58755414794724,
+        "median_seconds": 0.037611583014950156,
+        "median_seconds_per_operation": 0.037611583014950156,
+        "operations_per_sample": 1,
+        "samples_seconds": [
+          0.037611583014950156,
+          0.037762624910101295,
+          0.036569332936778665
+        ]
+      },
+      "constructor_gil_progress": {
+        "idle_counter_ticks_per_second": 17841266.362424675,
+        "idle_seconds": 0.1562980420421809,
+        "median_fraction_of_idle_counter_rate": 0.9848678104209231,
+        "method": "Python-only background counter during native constructor",
+        "samples": [
+          {
+            "constructor_seconds": 0.03852133289910853,
+            "fraction_of_idle_counter_rate": 0.962661858146203,
+            "python_counter_ticks": 661608,
+            "python_counter_ticks_per_second": 17175106.628133085
+          },
+          {
+            "constructor_seconds": 0.03832883294671774,
+            "fraction_of_idle_counter_rate": 0.9963311058014668,
+            "python_counter_ticks": 681326,
+            "python_counter_ticks_per_second": 17775808.64377309
+          },
+          {
+            "constructor_seconds": 0.03900237497873604,
+            "fraction_of_idle_counter_rate": 0.9848678104209231,
+            "python_counter_ticks": 685322,
+            "python_counter_ticks_per_second": 17571288.937497657
+          }
+        ],
+        "switch_interval_seconds": 0.001
+      },
+      "constructor_plus_first_signature": {
+        "median_operations_per_second": 5.242774325330005,
+        "median_seconds": 0.190738707780838,
+        "median_seconds_per_operation": 0.190738707780838,
+        "operations_per_sample": 1,
+        "samples_seconds": [
+          0.190738707780838,
+          0.19090095814317465,
+          0.19031849992461503
+        ]
+      },
+      "constructor_threads": {
+        "1": {
+          "median_operations_per_second": 27.16178821952465,
+          "median_seconds": 0.14726570900529623,
+          "median_seconds_per_operation": 0.03681642725132406,
+          "operations_per_sample": 4,
+          "samples_seconds": [
+            0.1494830420706421,
+            0.14701900002546608,
+            0.14726570900529623
+          ]
+        },
+        "4": {
+          "median_operations_per_second": 28.921908808867215,
+          "median_seconds": 0.13830345799215138,
+          "median_seconds_per_operation": 0.034575864498037845,
+          "operations_per_sample": 4,
+          "samples_seconds": [
+            0.13838683301582932,
+            0.13830345799215138,
+            0.13750483305193484
+          ]
+        },
+        "four_worker_speedup": 1.0648013516310884
+      },
+      "constructor_warm_process": {
+        "median_operations_per_second": 27.025870738498206,
+        "median_seconds": 0.037001583026722074,
+        "median_seconds_per_operation": 0.037001583026722074,
+        "operations_per_sample": 1,
+        "samples_seconds": [
+          0.03653749986551702,
+          0.037001583026722074,
+          0.037130832904949784
+        ]
+      },
+      "first_signature_fresh_context": {
+        "median_operations_per_second": 6.497752178937179,
+        "median_seconds": 0.15389937511645257,
+        "median_seconds_per_operation": 0.15389937511645257,
+        "operations_per_sample": 1,
+        "samples_seconds": [
+          0.154201207915321,
+          0.15389937511645257,
+          0.15318766701966524
+        ]
+      },
+      "members": 6,
+      "repeated_signature_same_context_and_index": {
+        "median_operations_per_second": 8.433261626174168,
+        "median_seconds": 0.3557342500425875,
+        "median_seconds_per_operation": 0.11857808334752917,
+        "operations_per_sample": 3,
+        "samples_seconds": [
+          0.3557342500425875,
+          0.3544559171423316,
+          0.35690149990841746
+        ]
+      },
+      "signer_index": 5,
+      "verification": {
+        "median_operations_per_second": 234.96163236063947,
+        "median_seconds": 0.012768042040988803,
+        "median_seconds_per_operation": 0.004256014013662934,
+        "operations_per_sample": 3,
+        "samples_seconds": [
+          0.012768042040988803,
+          0.012874000007286668,
+          0.012625041883438826
+        ]
+      }
+    }
+  },
+  "schema_version": 1
+}
