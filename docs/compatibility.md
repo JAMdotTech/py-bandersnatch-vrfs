@@ -62,7 +62,11 @@ indices/messages, ring isolation, and concurrent constructors in subprocesses
 with deadlock timeouts.
 
 The Windows CI matrix builds, installs, and tests wheels for CPython 3.9–3.14
-on both x86 and x64. The wider wheel build matrix is retained. Additional
+on both x86 and x64. Linux, musllinux, and macOS explicitly select regular
+CPython 3.9–3.15 and PyPy 3.11 wheels. Automatic cross-target discovery also
+selects free-threaded CPython 3.13, which PyO3 0.30.1 no longer supports;
+explicit interpreter selection avoids that unsupported build and does not
+claim free-threaded support. The wider architecture matrix is retained. Additional
 PyJAMaz GP0.8.0 integration results are recorded in the
 [validation report](pyjamaz-validation.md), and benchmark conditions and samples
 are in the [benchmark report](../benchmarks/results.md). Focused crypto

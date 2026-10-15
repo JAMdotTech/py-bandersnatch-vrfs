@@ -55,7 +55,11 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter
+          # PyO3 0.30 rejects 3.13t, which maturin discovery still includes
+          # for cross targets. Select regular CPython builds explicitly.
+          args: >-
+            --release --locked --out dist
+            --interpreter 3.9 3.10 3.11 3.12 3.13 3.14 3.15 pypy3.11
           sccache: 'true'
           manylinux: auto
       - name: Upload wheels
@@ -86,7 +90,9 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter
+          args: >-
+            --release --locked --out dist
+            --interpreter 3.9 3.10 3.11 3.12 3.13 3.14 3.15 pypy3.11
           sccache: 'true'
           manylinux: musllinux_1_2
       - name: Upload wheels
@@ -147,7 +153,9 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter
+          args: >-
+            --release --locked --out dist
+            --interpreter 3.9 3.10 3.11 3.12 3.13 3.14 3.15 pypy3.11
           sccache: 'true'
       - name: Upload wheels
         uses: actions/upload-artifact@v4
